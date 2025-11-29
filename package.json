@@ -1,0 +1,47 @@
+{
+  "name": "shopify-wholesale-app",
+  "version": "1.0.0",
+  "description": "Shopify B2B Wholesale App with Tiered Pricing",
+  "type": "module",
+  "scripts": {
+    "dev": "shopify app dev",
+    "dev:standalone": "node --loader ts-node/esm web/index-standalone.ts",
+    "dev:local": "npm run dev:standalone",
+    "build": "shopify app build",
+    "deploy": "shopify app deploy",
+    "config:link": "shopify app config link",
+    "generate": "shopify app generate",
+    "info": "shopify app info",
+    "webhook:trigger": "shopify app webhook trigger"
+  },
+  "dependencies": {
+    "@shopify/app": "^3.58.0",
+    "@shopify/app-bridge-react": "^4.1.2",
+    "@shopify/polaris": "^12.0.0",
+    "@shopify/polaris-icons": "^7.0.0",
+    "@shopify/shopify-api": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "koa": "^3.1.1",
+    "koa-bodyparser": "^4.4.1",
+    "koa-router": "^14.0.0",
+    "koa-static": "^5.0.0",
+    "sql.js": "^1.10.3"
+  },
+  "devDependencies": {
+    "@shopify/cli": "^3.58.0",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/koa": "^2.13.12",
+    "@types/koa-bodyparser": "^4.3.12",
+    "@types/koa-router": "^7.4.8",
+    "@types/koa-static": "^4.0.4",
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.46",
+    "@types/sql.js": "^1.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

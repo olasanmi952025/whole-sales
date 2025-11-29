@@ -1,0 +1,39 @@
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "wholesale-pricing"
+client_id = "34905465a2baf9766ab736de9122cb2e"
+application_url = "http://localhost:8081"
+embedded = true
+
+[access_scopes]
+scopes = "write_products,read_products,write_orders,read_orders,write_discounts,read_discounts,write_script_tags,read_script_tags"
+
+[auth]
+redirect_urls = [
+  "http://localhost:8081/auth/callback",
+  "http://localhost:8081/auth/shopify/callback",
+  "http://localhost:8081/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+[pos]
+embedded = false
+
+# Cart Transform Function temporalmente deshabilitada
+# Se puede habilitar después con: shopify app deploy
+# [[extensions]]
+# type = "function"
+# name = "cart-transform"
+# handle = "cart-transform"
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "mayoreo-9044.myshopify.com"
+
+[[app_proxy]]
+url = "http://localhost:8081"
+subpath = "apps"
+prefix = "apps"
+
