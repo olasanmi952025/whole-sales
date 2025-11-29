@@ -20,9 +20,23 @@ export class ProductsController {
     try {
       const session = ctx.state.shopify?.session;
       
-      if (!session?.accessToken) {
+      if (!session) {
         ctx.status = 401;
-        ctx.body = { success: false, error: 'No valid session' };
+        ctx.body = { success: false, error: 'No session found', debug: { hasState: !!ctx.state, hasShopify: !!ctx.state?.shopify } };
+        return;
+      }
+
+      if (!session.accessToken || session.accessToken === 'dev-token') {
+        ctx.status = 401;
+        ctx.body = { 
+          success: false, 
+          error: 'Invalid or mock access token. Please configure real Shopify credentials.',
+          debug: { 
+            shop: session.shop,
+            hasAccessToken: !!session.accessToken,
+            tokenType: session.accessToken === 'dev-token' ? 'mock' : 'unknown'
+          }
+        };
         return;
       }
 
@@ -63,9 +77,14 @@ export class ProductsController {
       }));
 
       ctx.body = { success: true, data: products };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching products:', error);
-      ctx.body = { success: false, error: 'Failed to fetch products' };
+      ctx.body = { 
+        success: false, 
+        error: 'Failed to fetch products',
+        details: error.message,
+        response: error.response?.errors
+      };
     }
   }
 

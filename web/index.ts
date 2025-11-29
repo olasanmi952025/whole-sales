@@ -24,11 +24,18 @@ async function startServer() {
   app.use(bodyParser());
 
   app.use(async (ctx, next) => {
+    const shop = ctx.query.shop as string || process.env.SHOPIFY_SHOP || 'mayoreo-9044.myshopify.com';
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token';
+    
     ctx.state = {
       shopify: {
         session: {
-          shop: ctx.query.shop || 'mayoreo-9044.myshopify.com',
-          accessToken: 'dev-token'
+          shop,
+          accessToken,
+          isOnline: false,
+          id: `offline_${shop}`,
+          state: 'active',
+          scope: process.env.SCOPES || ''
         }
       }
     };
