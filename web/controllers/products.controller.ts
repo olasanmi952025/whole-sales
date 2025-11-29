@@ -1,10 +1,33 @@
 import type { Context } from 'koa';
+import '@shopify/shopify-api/adapters/node';
+import { shopifyApi, ApiVersion } from '@shopify/shopify-api';
 
 export class ProductsController {
+  private shopify: any;
+
+  constructor() {
+    this.shopify = shopifyApi({
+      apiKey: process.env.SHOPIFY_API_KEY!,
+      apiSecretKey: process.env.SHOPIFY_API_SECRET!,
+      scopes: process.env.SCOPES?.split(',') || [],
+      hostName: process.env.HOST?.replace(/https?:\/\//, '') || 'localhost',
+      apiVersion: ApiVersion.January24,
+      isEmbeddedApp: true,
+    });
+  }
+
   async getProducts(ctx: Context): Promise<void> {
-    const shop = ctx.state.shopify?.session?.shop || ctx.query.shop;
-    
     try {
+      const session = ctx.state.shopify?.session;
+      
+      if (!session?.accessToken) {
+        ctx.status = 401;
+        ctx.body = { success: false, error: 'No valid session' };
+        return;
+      }
+
+      const client = new this.shopify.clients.Graphql({ session });
+
       const query = `
         query {
           products(first: 50) {
@@ -27,51 +50,17 @@ export class ProductsController {
         }
       `;
 
-      const products = [
-        {
-          id: 'gid://shopify/Product/1',
-          title: 'Classic T-Shirt',
-          variants: [
-            { id: 'gid://shopify/ProductVariant/101', title: 'Small', price: '19.99' },
-            { id: 'gid://shopify/ProductVariant/102', title: 'Medium', price: '19.99' },
-            { id: 'gid://shopify/ProductVariant/103', title: 'Large', price: '19.99' }
-          ]
-        },
-        {
-          id: 'gid://shopify/Product/2',
-          title: 'Premium Hoodie',
-          variants: [
-            { id: 'gid://shopify/ProductVariant/201', title: 'Small', price: '49.99' },
-            { id: 'gid://shopify/ProductVariant/202', title: 'Medium', price: '49.99' },
-            { id: 'gid://shopify/ProductVariant/203', title: 'Large', price: '49.99' }
-          ]
-        },
-        {
-          id: 'gid://shopify/Product/3',
-          title: 'Denim Jeans',
-          variants: [
-            { id: 'gid://shopify/ProductVariant/301', title: '28x30', price: '59.99' },
-            { id: 'gid://shopify/ProductVariant/302', title: '30x32', price: '59.99' },
-            { id: 'gid://shopify/ProductVariant/303', title: '32x34', price: '59.99' }
-          ]
-        },
-        {
-          id: 'gid://shopify/Product/4',
-          title: 'Running Shoes',
-          variants: [
-            { id: 'gid://shopify/ProductVariant/401', title: 'Size 8', price: '89.99' },
-            { id: 'gid://shopify/ProductVariant/402', title: 'Size 9', price: '89.99' },
-            { id: 'gid://shopify/ProductVariant/403', title: 'Size 10', price: '89.99' }
-          ]
-        },
-        {
-          id: 'gid://shopify/Product/5',
-          title: 'Baseball Cap',
-          variants: [
-            { id: 'gid://shopify/ProductVariant/501', title: 'One Size', price: '24.99' }
-          ]
-        }
-      ];
+      const response = await client.query({ data: query });
+      
+      const products = response.body.data.products.edges.map((edge: any) => ({
+        id: edge.node.id,
+        title: edge.node.title,
+        variants: edge.node.variants.edges.map((variantEdge: any) => ({
+          id: variantEdge.node.id,
+          title: variantEdge.node.title,
+          price: variantEdge.node.price
+        }))
+      }));
 
       ctx.body = { success: true, data: products };
     } catch (error) {
@@ -82,11 +71,35 @@ export class ProductsController {
 
   async getCollections(ctx: Context): Promise<void> {
     try {
-      const collections = [
-        { id: 'gid://shopify/Collection/1', title: 'Summer Collection' },
-        { id: 'gid://shopify/Collection/2', title: 'Winter Collection' },
-        { id: 'gid://shopify/Collection/3', title: 'Best Sellers' }
-      ];
+      const session = ctx.state.shopify?.session;
+      
+      if (!session?.accessToken) {
+        ctx.status = 401;
+        ctx.body = { success: false, error: 'No valid session' };
+        return;
+      }
+
+      const client = new this.shopify.clients.Graphql({ session });
+
+      const query = `
+        query {
+          collections(first: 50) {
+            edges {
+              node {
+                id
+                title
+              }
+            }
+          }
+        }
+      `;
+
+      const response = await client.query({ data: query });
+      
+      const collections = response.body.data.collections.edges.map((edge: any) => ({
+        id: edge.node.id,
+        title: edge.node.title
+      }));
 
       ctx.body = { success: true, data: collections };
     } catch (error) {
