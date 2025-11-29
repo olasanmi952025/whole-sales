@@ -1,6 +1,6 @@
 import { Autocomplete, Icon, InlineStack, Text, Spinner } from '@shopify/polaris';
 import { SearchMinor } from '@shopify/polaris-icons';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface Product {
   id: string;
@@ -29,31 +29,53 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
   const [variantInputValue, setVariantInputValue] = useState('');
 
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        if (targetType === 'collection') {
+          const res = await fetch('/api/collections');
+          const data = await res.json();
+          if (data.success) {
+            setCollections(data.data);
+          }
+        } else {
+          const res = await fetch('/api/products');
+          const data = await res.json();
+          if (data.success) {
+            setProducts(data.data);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
   }, [targetType]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      if (targetType === 'collection') {
-        const res = await fetch('/api/collections');
-        const data = await res.json();
-        if (data.success) {
-          setCollections(data.data);
-        }
-      } else {
-        const res = await fetch('/api/products');
-        const data = await res.json();
-        if (data.success) {
-          setProducts(data.data);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const productOptions = useMemo(() => products.map(p => ({
+    value: p.id,
+    label: p.title
+  })), [products]);
+
+  const collectionOptions = useMemo(() => collections.map(c => ({
+    value: c.id,
+    label: c.title
+  })), [collections]);
+
+  const filteredProductOptions = useMemo(() => {
+    return productOptions.filter(option =>
+      option.label.toLowerCase().includes(inputValue.toLowerCase())
+    );
+  }, [productOptions, inputValue]);
+
+  const filteredCollectionOptions = useMemo(() => {
+    return collectionOptions.filter(option =>
+      option.label.toLowerCase().includes(inputValue.toLowerCase())
+    );
+  }, [collectionOptions, inputValue]);
 
   if (loading) {
     return (
@@ -65,26 +87,13 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
   }
 
   if (targetType === 'collection') {
-    const options = collections.map(c => ({
-      value: c.id,
-      label: c.title
-    }));
-
-    const filteredOptions = useMemo(() => {
-      return options.filter(option =>
-        option.label.toLowerCase().includes(inputValue.toLowerCase())
-      );
-    }, [options, inputValue]);
-
-    const selectedOption = options.find(opt => opt.value === value);
-
     return (
       <Autocomplete
-        options={filteredOptions}
+        options={filteredCollectionOptions}
         selected={value ? [value] : []}
         onSelect={(selected) => {
           onChange(selected[0]);
-          const option = options.find(opt => opt.value === selected[0]);
+          const option = collectionOptions.find(opt => opt.value === selected[0]);
           setInputValue(option?.label || '');
         }}
         textField={
@@ -103,22 +112,13 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
   }
 
   if (targetType === 'variant') {
-    const productOptions = products.map(p => ({
-      value: p.id,
-      label: p.title
-    }));
-
-    const filteredProductOptions = useMemo(() => {
-      return productOptions.filter(option =>
-        option.label.toLowerCase().includes(inputValue.toLowerCase())
-      );
-    }, [productOptions, inputValue]);
-
     const selectedProductData = products.find(p => p.id === selectedProduct);
-    const variantOptions = selectedProductData?.variants?.map(v => ({
-      value: v.id,
-      label: `${v.title} - $${v.price}`
-    })) || [];
+    const variantOptions = useMemo(() => 
+      selectedProductData?.variants?.map(v => ({
+        value: v.id,
+        label: `${v.title} - $${v.price}`
+      })) || []
+    , [selectedProductData]);
 
     const filteredVariantOptions = useMemo(() => {
       return variantOptions.filter(option =>
@@ -174,20 +174,9 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
     );
   }
 
-  const productOptions = products.map(p => ({
-    value: p.id,
-    label: p.title
-  }));
-
-  const filteredOptions = useMemo(() => {
-    return productOptions.filter(option =>
-      option.label.toLowerCase().includes(inputValue.toLowerCase())
-    );
-  }, [productOptions, inputValue]);
-
   return (
     <Autocomplete
-      options={filteredOptions}
+      options={filteredProductOptions}
       selected={value ? [value] : []}
       onSelect={(selected) => {
         onChange(selected[0]);
@@ -201,7 +190,7 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
           onChange={setInputValue}
           placeholder="Search products..."
           autoComplete="off"
-          prefix={<Icon source={SearchIcon} />}
+          prefix={<Icon source={SearchMinor} />}
           error={error}
         />
       }
