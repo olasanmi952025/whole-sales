@@ -26,7 +26,9 @@ export class ProductsController {
         return;
       }
 
-      if (!session.accessToken || session.accessToken === 'dev-token') {
+      console.log('session', session);
+
+      if (!session.accessToken) {
         ctx.status = 401;
         ctx.body = { 
           success: false, 
