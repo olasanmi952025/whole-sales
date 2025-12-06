@@ -1,17 +1,44 @@
-import { Frame, Navigation, TopBar } from '@shopify/polaris';
+import { Frame, Navigation, TopBar, Banner, Page, Spinner } from '@shopify/polaris';
 import { useState } from 'react';
 import RulesPage from './pages/RulesPage';
 import LogsPage from './pages/LogsPage';
+import { useShop } from './context/ShopContext';
 
-type Page = 'rules' | 'logs';
+type PageType = 'rules' | 'logs';
 
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>('rules');
+  const [activePage, setActivePage] = useState<PageType>('rules');
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
+  const { shop, isLoading } = useShop();
 
   const toggleMobileNavigation = () => {
     setMobileNavigationActive(prev => !prev);
   };
+
+  // Mostrar spinner mientras se carga el shop
+  if (isLoading) {
+    return (
+      <Page>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <Spinner accessibilityLabel="Loading" size="large" />
+        </div>
+      </Page>
+    );
+  }
+
+  // Mostrar error si no se encuentra el shop
+  if (!shop) {
+    return (
+      <Page>
+        <Banner tone="critical">
+          <p>Error: No se pudo identificar la tienda. Por favor, reinstala la app.</p>
+          <p style={{ marginTop: '1rem' }}>
+            <a href={`/api/auth?shop=${window.location.hostname}`}>Reinstalar App</a>
+          </p>
+        </Banner>
+      </Page>
+    );
+  }
 
   const topBarMarkup = (
     <TopBar

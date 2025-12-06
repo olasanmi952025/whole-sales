@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useShop } from '../context/ShopContext';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -9,6 +10,7 @@ interface ApiResponse<T> {
 export function useApi<T>() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { shop } = useShop();
 
   const request = useCallback(async (
     url: string,
@@ -18,7 +20,16 @@ export function useApi<T>() {
     setError(null);
 
     try {
-      const response = await fetch(url, {
+      // Agregar parámetro shop a la URL si no está presente
+      let fullUrl = url;
+      if (shop) {
+        const separator = url.includes('?') ? '&' : '?';
+        if (!url.includes('shop=')) {
+          fullUrl = `${url}${separator}shop=${encodeURIComponent(shop)}`;
+        }
+      }
+
+      const response = await fetch(fullUrl, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -26,7 +37,7 @@ export function useApi<T>() {
         },
       });
 
-      const data: ApiResponse<T> = await response.json();
+      const data = await response.json() as ApiResponse<T>;
 
       if (!data.success) {
         throw new Error(data.error || 'Request failed');
@@ -40,7 +51,7 @@ export function useApi<T>() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [shop]);
 
   return { loading, error, request };
 }

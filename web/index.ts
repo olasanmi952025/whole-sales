@@ -77,12 +77,22 @@ async function startServer() {
   app.use(serve(frontendPath));
 
   app.use(async ctx => {
-    if (!ctx.body && ctx.method === 'GET') {
+    if (!ctx.body && ctx.method === 'GET' && !ctx.path.startsWith('/api/')) {
       try {
         const indexPath = join(frontendPath, 'index.html');
         ctx.type = 'html';
         const { readFileSync } = await import('fs');
-        ctx.body = readFileSync(indexPath, 'utf-8');
+        let html = readFileSync(indexPath, 'utf-8');
+        
+        // Inyectar el shop en el HTML si está disponible
+        const shop = ctx.query.shop as string || ctx.state.shopify?.session?.shop;
+        if (shop) {
+          // Inyectar shop como variable global antes de cargar los scripts
+          const shopScript = `<script>window.SHOPIFY_SHOP = "${shop}";</script>`;
+          html = html.replace('</head>', `${shopScript}</head>`);
+        }
+        
+        ctx.body = html;
       } catch {
         ctx.status = 404;
         ctx.body = { success: false, error: 'Not found' };
