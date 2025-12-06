@@ -10,7 +10,7 @@ export class PricingRulesRepository {
     
     const rules: PricingRule[] = [];
     while (stmt.step()) {
-      const row = stmt.getAsObject() as PricingRule;
+      const row = stmt.getAsObject() as unknown as PricingRule;
       rules.push({
         ...row,
         active: Boolean(row.active),
@@ -29,7 +29,7 @@ export class PricingRulesRepository {
     
     let rule: PricingRule | undefined;
     if (stmt.step()) {
-      rule = stmt.getAsObject() as PricingRule;
+      rule = stmt.getAsObject() as unknown as PricingRule;
       rule.active = Boolean(rule.active);
       rule.tiers = await this.findTiersByRuleId(id);
     }
@@ -50,7 +50,7 @@ export class PricingRulesRepository {
     
     let rule: PricingRule | undefined;
     if (stmt.step()) {
-      rule = stmt.getAsObject() as PricingRule;
+      rule = stmt.getAsObject() as unknown as PricingRule;
       rule.active = Boolean(rule.active);
       rule.tiers = await this.findTiersByRuleId(rule.id!);
     }
@@ -131,7 +131,7 @@ export class PricingRulesRepository {
     
     const tiers: PricingTier[] = [];
     while (stmt.step()) {
-      tiers.push(stmt.getAsObject() as PricingTier);
+      tiers.push(stmt.getAsObject() as unknown as PricingTier);
     }
     stmt.free();
     

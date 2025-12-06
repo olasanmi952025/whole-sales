@@ -18,7 +18,7 @@
     "allowJs": true,
     "types": ["node"]
   },
-  "include": ["web/**/*", "extensions/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["web/**/*.ts", "extensions/**/*"],
+  "exclude": ["node_modules", "dist", "web/frontend", "web/dist"]
 }
 

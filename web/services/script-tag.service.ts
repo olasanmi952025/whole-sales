@@ -1,5 +1,5 @@
 import '@shopify/shopify-api/adapters/node';
-import { shopifyApi } from '@shopify/shopify-api';
+import { shopifyApi, LATEST_API_VERSION } from '@shopify/shopify-api';
 
 export class ScriptTagService {
   private shopify: any;
@@ -10,7 +10,7 @@ export class ScriptTagService {
       apiSecretKey: process.env.SHOPIFY_API_SECRET!,
       scopes: process.env.SCOPES?.split(',') || [],
       hostName: process.env.HOST?.replace(/https?:\/\//, '') || 'localhost',
-      apiVersion: '2024-01',
+      apiVersion: LATEST_API_VERSION,
       isEmbeddedApp: true,
     });
   }

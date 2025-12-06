@@ -10,7 +10,7 @@ export class RuleLogsRepository {
     
     const logs: RuleLog[] = [];
     while (stmt.step()) {
-      logs.push(stmt.getAsObject() as RuleLog);
+      logs.push(stmt.getAsObject() as unknown as RuleLog);
     }
     stmt.free();
     
@@ -24,7 +24,7 @@ export class RuleLogsRepository {
     
     const logs: RuleLog[] = [];
     while (stmt.step()) {
-      logs.push(stmt.getAsObject() as RuleLog);
+      logs.push(stmt.getAsObject() as unknown as RuleLog);
     }
     stmt.free();
     
