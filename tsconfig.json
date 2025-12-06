@@ -11,14 +11,13 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "declaration": false,
+    "sourceMap": false,
     "jsx": "react-jsx",
     "allowJs": true,
     "types": ["node"]
   },
-  "include": ["web/**/*.ts", "extensions/**/*"],
+  "include": ["web/**/*.ts"],
   "exclude": ["node_modules", "dist", "web/frontend", "web/dist"]
 }
 
