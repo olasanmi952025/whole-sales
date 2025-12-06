@@ -49,62 +49,105 @@ Sistema B2B completo para precios por cantidad (Tiered Pricing / Quantity Breaks
 - **APIs**: Shopify Admin API, Shopify Functions API
 - **Auth**: Shopify App Bridge
 
-## Instalación
+## 🚀 Instalación Rápida con OAuth
+
+### Autenticación OAuth Automática
+
+**Nueva funcionalidad:** La app ahora obtiene automáticamente los tokens de acceso mediante OAuth cuando se instala en una tienda. ¡No más tokens hardcodeados!
+
+### Instalación en 3 Pasos
+
+#### 1. Configurar Variables de Entorno
+
+Crea un archivo `.env` en la raíz:
+
+```env
+# Credenciales de Shopify (desde Partners Dashboard)
+SHOPIFY_API_KEY=tu_client_id_aqui
+SHOPIFY_API_SECRET=tu_client_secret_aqui
+
+# URL de tu app (usa ngrok para desarrollo local)
+HOST=https://your-app-url.com
+
+# Permisos necesarios
+SCOPES=read_products,write_products,read_orders,write_orders,read_discounts,write_discounts,read_script_tags,write_script_tags
+
+# Configuración del servidor
+PORT=8081
+NODE_ENV=development
+DATABASE_PATH=./database.db
+```
+
+**Obtener credenciales:** Ve a [Shopify Partners Dashboard](https://partners.shopify.com/) → Tu App → Configuration
+
+#### 2. Configurar URLs en Shopify Partners
+
+En la configuración de tu app:
+
+- **App URL**: `https://your-app-url.com/`
+- **Allowed redirection URLs**:
+  - `https://your-app-url.com/api/auth/callback`
+  - `https://your-app-url.com/api/auth`
+  - `https://your-app-url.com/`
+
+#### 3. Instalar y Ejecutar
+
+```bash
+# Instalar dependencias
+npm install
+
+# Verificar configuración (Windows)
+.\scripts\test-oauth.ps1
+
+# Verificar configuración (Linux/Mac)
+./scripts/test-oauth.sh
+
+# Iniciar servidor
+npm run dev
+
+# Instalar en tu tienda visitando:
+# http://localhost:8081/api/auth?shop=tu-tienda.myshopify.com
+```
+
+### 📚 Documentación Completa
+
+- **[INSTALL_OAUTH.md](./INSTALL_OAUTH.md)** - Guía de instalación paso a paso
+- **[OAUTH_SETUP.md](./OAUTH_SETUP.md)** - Documentación técnica completa de OAuth
+
+### Desarrollo Local con ngrok
+
+```bash
+# Terminal 1: Servidor
+npm run dev
+
+# Terminal 2: ngrok
+ngrok http 8081
+
+# Actualizar .env con URL de ngrok
+# Actualizar URLs en Shopify Partners Dashboard
+# Reiniciar servidor
+```
 
 ### 1. Requisitos
 
 - Node.js 18+
 - npm o yarn
 - Cuenta de Shopify Partners
-- Shopify CLI 3
+- ngrok (para desarrollo local)
 
-### 2. Configuración Inicial
+### 2. Deploy a Producción
 
-```bash
-# Instalar Shopify CLI
-npm install -g @shopify/cli @shopify/app
-
-# Clonar y configurar
-npm install
-
-# Configurar variables de entorno
-cp .env.example .env
-```
-
-### 3. Variables de Entorno
-
-Edita `.env`:
-
-```env
-SHOPIFY_API_KEY=tu_api_key
-SHOPIFY_API_SECRET=tu_api_secret
-SCOPES=write_products,read_products,write_orders,read_orders,write_discounts,read_discounts,write_script_tags,read_script_tags
-HOST=https://tu-dominio.ngrok.io
-DATABASE_PATH=./database.db
-NODE_ENV=development
-```
-
-### 4. Desarrollo
+#### Railway / Heroku
 
 ```bash
-# Iniciar servidor de desarrollo
-npm run dev
+# Configurar variables de entorno en tu plataforma
+SHOPIFY_API_KEY=xxx
+SHOPIFY_API_SECRET=xxx
+HOST=https://your-app.railway.app
+SCOPES=read_products,write_products,...
 
-# En otra terminal, compilar frontend
-cd web/frontend
-npm install
-npm run dev
-```
-
-### 5. Deploy
-
-```bash
-# Deploy a Shopify
-npm run deploy
-
-# Build frontend para producción
-cd web/frontend
-npm run build
+# Deploy
+git push railway main  # o heroku main
 ```
 
 ## Base de Datos

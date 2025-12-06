@@ -33,9 +33,24 @@ CREATE TABLE IF NOT EXISTS rule_logs (
     FOREIGN KEY (rule_id) REFERENCES pricing_rules(id) ON DELETE SET NULL
 );
 
+-- Tabla para almacenar sesiones de Shopify
+CREATE TABLE IF NOT EXISTS shopify_sessions (
+    id TEXT PRIMARY KEY,
+    shop TEXT NOT NULL,
+    state TEXT NOT NULL,
+    isOnline INTEGER DEFAULT 0 CHECK(isOnline IN (0, 1)),
+    scope TEXT,
+    accessToken TEXT,
+    expires DATETIME,
+    onlineAccessInfo TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_pricing_rules_shop ON pricing_rules(shop);
 CREATE INDEX IF NOT EXISTS idx_pricing_rules_target ON pricing_rules(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_pricing_tiers_rule ON pricing_tiers(rule_id);
 CREATE INDEX IF NOT EXISTS idx_rule_logs_shop ON rule_logs(shop);
 CREATE INDEX IF NOT EXISTS idx_rule_logs_order ON rule_logs(order_id);
+CREATE INDEX IF NOT EXISTS idx_shopify_sessions_shop ON shopify_sessions(shop);
 

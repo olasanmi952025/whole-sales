@@ -2,6 +2,8 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import { initializeDatabase } from './database/database-sqljs.js';
 import apiRoutes from './routes/api.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import { verifyShopifySession } from './middleware/shopify-auth.js';
 import dotenv from 'dotenv';
 import serve from 'koa-static';
 import { fileURLToPath } from 'url';
@@ -17,30 +19,16 @@ const PORT = process.env.PORT || 8081;
 const app = new Koa();
 
 async function startServer() {
-  console.log('🚀 Starting Wholesale Pricing App - Shopify Mode');
+  console.log('🚀 Starting Wholesale Pricing App - Shopify OAuth Mode');
+  console.log('📋 Configuration:');
+  console.log('   - API Key:', process.env.SHOPIFY_API_KEY ? '✓ Set' : '✗ Missing');
+  console.log('   - API Secret:', process.env.SHOPIFY_API_SECRET ? '✓ Set' : '✗ Missing');
+  console.log('   - Host:', process.env.HOST || 'Not set');
+  console.log('   - Scopes:', process.env.SCOPES || 'Using defaults');
 
   await initializeDatabase();
 
   app.use(bodyParser());
-
-  app.use(async (ctx, next) => {
-    const shop = ctx.query.shop as string || process.env.SHOPIFY_SHOP || 'mayoreo-9044.myshopify.com';
-    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token';
-    
-    ctx.state = {
-      shopify: {
-        session: {
-          shop,
-          accessToken,
-          isOnline: false,
-          id: `offline_${shop}`,
-          state: 'active',
-          scope: process.env.SCOPES || ''
-        }
-      }
-    };
-    await next();
-  });
 
   app.use(async (ctx, next) => {
     ctx.set('Access-Control-Allow-Origin', '*');
@@ -68,6 +56,20 @@ async function startServer() {
     }
   });
 
+  // Rutas de autenticación (sin middleware de sesión)
+  app.use(authRoutes.routes());
+  app.use(authRoutes.allowedMethods());
+
+  // Rutas de API (con middleware de sesión)
+  app.use(async (ctx, next) => {
+    // Solo aplicar verificación de sesión a rutas de API
+    if (ctx.path.startsWith('/api/') && !ctx.path.startsWith('/api/auth')) {
+      await verifyShopifySession(ctx, next);
+    } else {
+      await next();
+    }
+  });
+
   app.use(apiRoutes.routes());
   app.use(apiRoutes.allowedMethods());
 
@@ -92,6 +94,10 @@ async function startServer() {
     console.log('');
     console.log('✅ Backend running on: http://localhost:' + PORT);
     console.log('📊 API endpoints: http://localhost:' + PORT + '/api/rules');
+    console.log('🔐 OAuth start: http://localhost:' + PORT + '/api/auth?shop=YOUR-SHOP.myshopify.com');
+    console.log('');
+    console.log('💡 To install the app, visit:');
+    console.log('   http://localhost:' + PORT + '/api/auth?shop=mayoreo-9044.myshopify.com');
     console.log('');
   });
 }
