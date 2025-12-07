@@ -24,9 +24,11 @@ export const shopify = shopifyApi({
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   scopes: process.env.SCOPES?.split(',') || ['read_products', 'write_products', 'read_orders', 'write_orders'],
   hostName: hostName,
+  hostScheme: 'https',
   apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: true,
+  isEmbeddedApp: false, // Cambiar a false para apps standalone
   isCustomStoreApp: false,
+  useOnlineTokens: false,
 });
 
 // Middleware para verificar y cargar sesión

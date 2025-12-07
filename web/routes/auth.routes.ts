@@ -23,17 +23,10 @@ router.get('/', async (ctx: Context) => {
       return;
     }
 
-    // Generar state para CSRF protection
-    const state = crypto.randomBytes(16).toString('hex');
-    
-    // Guardar state en sesión temporal (en producción usar Redis o similar)
-    ctx.cookies.set('shopify_oauth_state', state, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 10 * 60 * 1000 // 10 minutos
-    });
-
     // Construir URL de autorización
+    console.log('🔐 Starting OAuth for shop:', shop);
+    console.log('🌐 HOST configured:', process.env.HOST);
+    
     const authRoute = await shopify.auth.begin({
       shop: shopify.utils.sanitizeShop(shop, true)!,
       callbackPath: '/api/auth/callback',
@@ -42,8 +35,11 @@ router.get('/', async (ctx: Context) => {
       rawResponse: ctx.res,
     });
 
-    console.log('🔐 Starting OAuth for shop:', shop);
-    console.log('📍 Redirecting to:', authRoute);
+    console.log('📍 Auth route generated:', authRoute);
+
+    if (!authRoute) {
+      throw new Error('Failed to generate auth route. Check HOST configuration.');
+    }
 
     ctx.redirect(authRoute);
   } catch (error: any) {
@@ -61,6 +57,14 @@ router.get('/', async (ctx: Context) => {
 router.get('/callback', async (ctx: Context) => {
   try {
     const { shop, code, state, hmac, host } = ctx.query;
+
+    console.log('📥 OAuth callback received:', {
+      shop,
+      code: code ? 'present' : 'missing',
+      state,
+      hmac: hmac ? 'present' : 'missing',
+      host
+    });
 
     if (!shop || !code) {
       ctx.status = 400;
@@ -91,6 +95,9 @@ router.get('/callback', async (ctx: Context) => {
       .digest('hex');
 
     if (generatedHmac !== hmac) {
+      console.error('❌ HMAC validation failed');
+      console.error('   Expected:', generatedHmac);
+      console.error('   Received:', hmac);
       ctx.status = 403;
       ctx.body = { success: false, error: 'Invalid HMAC signature' };
       return;
@@ -99,31 +106,46 @@ router.get('/callback', async (ctx: Context) => {
     console.log('✅ HMAC validated for shop:', sanitizedShop);
 
     // Intercambiar código por access token
-    const callback = await shopify.auth.callback({
-      rawRequest: ctx.req,
-      rawResponse: ctx.res,
-    });
+    try {
+      const callback = await shopify.auth.callback({
+        rawRequest: ctx.req,
+        rawResponse: ctx.res,
+      });
 
-    const { session } = callback;
+      const { session } = callback;
 
-    if (!session) {
+      if (!session) {
+        console.error('❌ No session returned from Shopify');
+        ctx.status = 500;
+        ctx.body = { success: false, error: 'Failed to create session' };
+        return;
+      }
+
+      // Guardar sesión en la base de datos
+      await saveSession(session);
+
+      console.log('✅ Session saved for shop:', session.shop);
+      console.log('🔑 Access Token obtained:', session.accessToken?.substring(0, 20) + '...');
+
+      // Redirigir a la app
+      const appUrl = `/?shop=${session.shop}&host=${host || ''}`;
+      
+      console.log('🔄 Redirecting to:', appUrl);
+      ctx.redirect(appUrl);
+    } catch (callbackError: any) {
+      console.error('❌ Error in shopify.auth.callback:', callbackError);
+      console.error('   Error details:', callbackError.message);
+      console.error('   Stack:', callbackError.stack);
+      
       ctx.status = 500;
-      ctx.body = { success: false, error: 'Failed to create session' };
-      return;
+      ctx.body = { 
+        success: false, 
+        error: 'OAuth callback failed',
+        details: callbackError.message 
+      };
     }
-
-    // Guardar sesión en la base de datos
-    await saveSession(session);
-
-    console.log('✅ Session saved for shop:', session.shop);
-    console.log('🔑 Access Token obtained:', session.accessToken?.substring(0, 20) + '...');
-
-    // Redirigir a la app
-    const appUrl = `/?shop=${session.shop}&host=${host || ''}`;
-    
-    ctx.redirect(appUrl);
   } catch (error: any) {
-    console.error('Error in OAuth callback:', error);
+    console.error('❌ Error in OAuth callback handler:', error);
     ctx.status = 500;
     ctx.body = { 
       success: false, 
