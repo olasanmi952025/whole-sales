@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync } from 'fs';
+import { cpSync, mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 // Crear directorio si no existe
 try {
   mkdirSync('dist/web/database', { recursive: true });
+  mkdirSync('dist/web/frontend', { recursive: true });
 } catch (err) {
   // Ignorar si ya existe
 }
@@ -19,6 +20,19 @@ try {
 } catch (err) {
   console.error('❌ Error copying schema.sql:', err.message);
   process.exit(1);
+}
+
+// Copiar frontend compilado
+if (existsSync('web/dist/frontend')) {
+  try {
+    cpSync('web/dist/frontend', 'dist/web/frontend', { recursive: true });
+    console.log('✅ Copied frontend build');
+  } catch (err) {
+    console.error('❌ Error copying frontend:', err.message);
+    process.exit(1);
+  }
+} else {
+  console.log('⚠️  Frontend not built yet (will be built later)');
 }
 
 // Copiar public si existe

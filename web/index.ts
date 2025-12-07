@@ -73,7 +73,11 @@ async function startServer() {
   app.use(apiRoutes.routes());
   app.use(apiRoutes.allowedMethods());
 
-  const frontendPath = join(__dirname, 'dist', 'frontend');
+  // En producción (compilado): dist/web/frontend
+  // En desarrollo: web/dist/frontend
+  const frontendPath = join(__dirname, 'frontend');
+  console.log('📁 Frontend path:', frontendPath);
+  
   app.use(serve(frontendPath));
 
   app.use(async ctx => {
@@ -93,9 +97,11 @@ async function startServer() {
         }
         
         ctx.body = html;
-      } catch {
+      } catch (error: any) {
+        console.error('❌ Error serving frontend:', error.message);
+        console.error('   Tried path:', frontendPath);
         ctx.status = 404;
-        ctx.body = { success: false, error: 'Not found' };
+        ctx.body = { success: false, error: 'Frontend not found', details: error.message };
       }
     }
   });
