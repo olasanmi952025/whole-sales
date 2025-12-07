@@ -12,7 +12,6 @@ include_config_on_deploy = true
 [webhooks]
 api_version = "2025-10"
 
-
 [access_scopes]
 # Permisos necesarios para app de pricing mayorista
 scopes = "read_products,write_products,read_orders,write_orders,read_discounts,write_discounts,read_script_tags,write_script_tags,read_price_rules,write_price_rules"
