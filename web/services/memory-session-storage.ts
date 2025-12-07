@@ -1,8 +1,17 @@
-import type { Session, SessionStorage } from '@shopify/shopify-api';
+import type { Session } from '@shopify/shopify-api';
+
+// Interface para SessionStorage compatible con Shopify API
+interface SessionStorageInterface {
+  storeSession(session: Session): Promise<boolean>;
+  loadSession(id: string): Promise<Session | undefined>;
+  deleteSession(id: string): Promise<boolean>;
+  deleteSessions(ids: string[]): Promise<boolean>;
+  findSessionsByShop(shop: string): Promise<Session[]>;
+}
 
 // SessionStorage en memoria para OAuth
 // En producción con múltiples instancias, usar Redis
-export class MemorySessionStorage implements SessionStorage {
+export class MemorySessionStorage implements SessionStorageInterface {
   private sessions: Map<string, Session> = new Map();
 
   async storeSession(session: Session): Promise<boolean> {
