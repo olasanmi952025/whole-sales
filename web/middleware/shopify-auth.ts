@@ -7,7 +7,7 @@ const sessionStorage = new SQLiteSessionStorage();
 
 // Obtener y validar HOST
 const rawHost = process.env.HOST || '';
-const hostName = rawHost.replace(/https?:\/\//, '') || 'localhost';
+const hostName = rawHost.replace(/https?:\/\//, '') || 'whole-sales-production.up.railway.app';
 
 console.log('🔧 Shopify API Configuration:');
 console.log('   - Raw HOST:', rawHost);
