@@ -30,15 +30,19 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      // Usar el script universal que funciona con todos los temas
+      // Scripts necesarios para el funcionamiento completo
       const scripts = [
         {
           url: `https://${this.hostName}/wholesale-pricing.js`,
           name: 'Product Page Script'
         },
         {
-          url: `https://${this.hostName}/wholesale-universal.js`,
-          name: 'Universal Cart Script'
+          url: `https://${this.hostName}/wholesale-cart-modifier.js`,
+          name: 'Cart Modifier Script'
+        },
+        {
+          url: `https://${this.hostName}/wholesale-checkout-redirect.js`,
+          name: 'Checkout Redirect Script'
         }
       ];
 
