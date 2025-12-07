@@ -2,9 +2,10 @@ import { Frame, Navigation, TopBar, Banner, Page, Spinner } from '@shopify/polar
 import { useState } from 'react';
 import RulesPage from './pages/RulesPage';
 import LogsPage from './pages/LogsPage';
+import SettingsPage from './pages/SettingsPage';
 import { useShop } from './context/ShopContext';
 
-type PageType = 'rules' | 'logs';
+type PageType = 'rules' | 'logs' | 'settings';
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageType>('rules');
@@ -61,6 +62,11 @@ export default function App() {
             onClick: () => setActivePage('logs'),
             selected: activePage === 'logs',
           },
+          {
+            label: 'Settings',
+            onClick: () => setActivePage('settings'),
+            selected: activePage === 'settings',
+          },
         ]}
       />
     </Navigation>
@@ -75,6 +81,7 @@ export default function App() {
     >
       {activePage === 'rules' && <RulesPage />}
       {activePage === 'logs' && <LogsPage />}
+      {activePage === 'settings' && <SettingsPage />}
     </Frame>
   );
 }
