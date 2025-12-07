@@ -30,32 +30,50 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      const scriptUrl = `https://${this.hostName}/wholesale-pricing.js`;
-      
-      const alreadyInstalled = existingScripts.body.script_tags?.some(
-        (tag: any) => tag.src === scriptUrl
-      );
+      const scripts = [
+        {
+          url: `https://${this.hostName}/wholesale-pricing.js`,
+          name: 'Product Page Script'
+        },
+        {
+          url: `https://${this.hostName}/wholesale-cart.js`,
+          name: 'Cart Script'
+        }
+      ];
 
-      if (alreadyInstalled) {
-        console.log('✅ Script tag already installed');
-        return true;
+      let allInstalled = true;
+
+      for (const script of scripts) {
+        const alreadyInstalled = existingScripts.body.script_tags?.some(
+          (tag: any) => tag.src === script.url
+        );
+
+        if (alreadyInstalled) {
+          console.log(`✅ ${script.name} already installed`);
+          continue;
+        }
+
+        try {
+          await client.post({
+            path: 'script_tags',
+            data: {
+              script_tag: {
+                event: 'onload',
+                src: script.url,
+                display_scope: 'online_store',
+              }
+            }
+          });
+          console.log(`✅ ${script.name} installed successfully:`, script.url);
+        } catch (error) {
+          console.error(`Error installing ${script.name}:`, error);
+          allInstalled = false;
+        }
       }
 
-      await client.post({
-        path: 'script_tags',
-        data: {
-          script_tag: {
-            event: 'onload',
-            src: scriptUrl,
-            display_scope: 'online_store',
-          }
-        }
-      });
-
-      console.log('✅ Script tag installed successfully:', scriptUrl);
-      return true;
+      return allInstalled;
     } catch (error) {
-      console.error('Error installing script tag:', error);
+      console.error('Error installing script tags:', error);
       return false;
     }
   }
@@ -68,22 +86,27 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      const scriptUrl = `https://${this.hostName}/wholesale-pricing.js`;
-      
-      const scriptTag = existingScripts.body.script_tags?.find(
-        (tag: any) => tag.src === scriptUrl
-      );
+      const scriptUrls = [
+        `https://${this.hostName}/wholesale-pricing.js`,
+        `https://${this.hostName}/wholesale-cart.js`
+      ];
 
-      if (scriptTag) {
-        await client.delete({
-          path: `script_tags/${scriptTag.id}`,
-        });
-        console.log('Script tag uninstalled successfully');
+      for (const scriptUrl of scriptUrls) {
+        const scriptTag = existingScripts.body.script_tags?.find(
+          (tag: any) => tag.src === scriptUrl
+        );
+
+        if (scriptTag) {
+          await client.delete({
+            path: `script_tags/${scriptTag.id}`,
+          });
+          console.log('Script tag uninstalled:', scriptUrl);
+        }
       }
 
       return true;
     } catch (error) {
-      console.error('Error uninstalling script tag:', error);
+      console.error('Error uninstalling script tags:', error);
       return false;
     }
   }

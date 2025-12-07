@@ -99,5 +99,100 @@ router.post('/calculate-price', async (ctx) => {
   }
 });
 
+// Endpoint para validar y calcular precios de todo el carrito
+router.post('/calculate-cart', async (ctx) => {
+  try {
+    const { shop, items } = ctx.request.body as any;
+
+    console.log('[Calculate Cart] Request:', { shop, itemCount: items?.length });
+
+    if (!shop || !items || !Array.isArray(items)) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: 'Missing required parameters: shop, items' };
+      return;
+    }
+
+    const { PricingRulesRepository } = await import('../repositories/pricing-rules.repository.js');
+    const repository = new PricingRulesRepository();
+
+    const calculatedItems = [];
+    let totalDiscount = 0;
+    let hasWholesalePricing = false;
+
+    // Procesar cada item del carrito
+    for (const item of items) {
+      const { variant_id, product_id, quantity, line_price } = item;
+
+      if (!quantity || quantity <= 0) continue;
+
+      // Buscar regla aplicable
+      let rule = null;
+
+      if (variant_id) {
+        const normalizedVariantId = normalizeToGid(variant_id, 'ProductVariant');
+        rule = await repository.findByTarget(shop, 'variant', normalizedVariantId);
+      }
+
+      if (!rule && product_id) {
+        const normalizedProductId = normalizeToGid(product_id, 'Product');
+        rule = await repository.findByTarget(shop, 'product', normalizedProductId);
+      }
+
+      // Calcular precio con regla si existe
+      let wholesalePrice = null;
+      let itemDiscount = 0;
+
+      if (rule && rule.tiers && rule.tiers.length > 0) {
+        const sortedTiers = [...rule.tiers].sort((a, b) => b.min_quantity - a.min_quantity);
+        const applicableTier = sortedTiers.find(t => quantity >= t.min_quantity);
+
+        if (applicableTier) {
+          wholesalePrice = applicableTier.price * quantity;
+          const originalPrice = line_price / 100; // Shopify envía en centavos
+          itemDiscount = Math.max(0, originalPrice - wholesalePrice);
+          totalDiscount += itemDiscount;
+          hasWholesalePricing = true;
+
+          console.log('[Calculate Cart] Rule applied:', {
+            variant_id,
+            quantity,
+            original: originalPrice,
+            wholesale: wholesalePrice,
+            discount: itemDiscount
+          });
+        }
+      }
+
+      calculatedItems.push({
+        variant_id,
+        product_id,
+        quantity,
+        original_line_price: line_price,
+        wholesale_line_price: wholesalePrice ? Math.round(wholesalePrice * 100) : null,
+        discount: Math.round(itemDiscount * 100),
+        rule_applied: rule ? {
+          id: rule.id,
+          name: rule.rule_name
+        } : null
+      });
+    }
+
+    ctx.body = {
+      success: true,
+      data: {
+        items: calculatedItems,
+        total_discount: Math.round(totalDiscount * 100),
+        has_wholesale_pricing: hasWholesalePricing,
+        currency: 'USD'
+      }
+    };
+
+  } catch (error: any) {
+    console.error('[Calculate Cart] Error:', error);
+    ctx.status = 500;
+    ctx.body = { success: false, error: 'Internal server error' };
+  }
+});
+
 export default router;
 

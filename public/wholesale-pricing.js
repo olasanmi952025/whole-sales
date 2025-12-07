@@ -277,26 +277,32 @@
         const forms = document.querySelectorAll('form[action*="/cart/add"]');
 
         forms.forEach(form => {
-            form.addEventListener('submit', async function(event) {
-                if (!activeTier) return; // No hay precio mayorista, dejar flujo normal
+            // Remover listeners anteriores para evitar duplicados
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
 
+            newForm.addEventListener('submit', async function(event) {
+                // Siempre interceptar para agregar metadatos
                 event.preventDefault();
 
-                const formData = new FormData(form);
+                const formData = new FormData(newForm);
                 const variantId = formData.get('id');
                 const quantity = parseInt(formData.get('quantity') || '1');
 
-                // Agregar propiedades personalizadas con el precio mayorista
-                const properties = {
-                    '_wholesale_price': activeTier.price,
-                    '_wholesale_tier': activeTier.min_quantity,
-                    '_original_price': originalPrice
-                };
+                console.log('[Wholesale] Adding to cart:', { variantId, quantity, hasActiveTier: !!activeTier });
 
-                // Agregar propiedades al FormData
-                Object.entries(properties).forEach(([key, value]) => {
-                    formData.append(`properties[${key}]`, value);
-                });
+                // Si hay precio mayorista, agregar propiedades
+                if (activeTier) {
+                    const properties = {
+                        '_wholesale_price': activeTier.price,
+                        '_wholesale_tier': activeTier.min_quantity,
+                        '_wholesale_rule': currentProductId
+                    };
+
+                    Object.entries(properties).forEach(([key, value]) => {
+                        formData.append(`properties[${key}]`, value);
+                    });
+                }
 
                 // Enviar al carrito
                 try {
@@ -306,20 +312,78 @@
                     });
 
                     if (response.ok) {
-                        // Redirigir o mostrar mensaje de éxito
-                        if (window.theme && window.theme.cart && window.theme.cart.refresh) {
-                            window.theme.cart.refresh();
-                        } else {
-                            window.location.href = '/cart';
-                        }
+                        const result = await response.json();
+                        console.log('[Wholesale] Added to cart:', result);
+
+                        // Mostrar notificación de éxito
+                        showAddToCartSuccess(quantity, activeTier);
+
+                        // Refrescar carrito o redirigir
+                        setTimeout(() => {
+                            if (window.theme && window.theme.cart && window.theme.cart.refresh) {
+                                window.theme.cart.refresh();
+                            } else if (window.Shopify && window.Shopify.drawer) {
+                                window.Shopify.drawer.open();
+                            } else {
+                                // Recargar la página para mostrar el carrito actualizado
+                                window.location.reload();
+                            }
+                        }, 1000);
+                    } else {
+                        throw new Error('Failed to add to cart');
                     }
                 } catch (error) {
                     console.error('[Wholesale] Error adding to cart:', error);
-                    // Dejar que el formulario se envíe normalmente
-                    form.submit();
+                    alert('Error al agregar al carrito. Por favor intenta de nuevo.');
                 }
             });
         });
+    }
+
+    // Mostrar notificación de éxito al agregar al carrito
+    function showAddToCartSuccess(quantity, tier) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideInRight 0.3s ease-out;
+        `;
+
+        const message = tier 
+            ? `✓ ${quantity} ${quantity > 1 ? 'unidades agregadas' : 'unidad agregada'} con precio mayorista`
+            : `✓ ${quantity} ${quantity > 1 ? 'unidades agregadas' : 'unidad agregada'} al carrito`;
+
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // Agregar animación
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Remover después de 3 segundos
+        setTimeout(() => {
+            notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 
     // Inicializar
