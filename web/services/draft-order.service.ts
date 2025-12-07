@@ -29,29 +29,22 @@ export class DraftOrderService {
   async createWholesaleDraftOrder(
     session: any,
     lineItems: DraftOrderLineItem[],
-    customerEmail?: string
-  ): Promise<{ success: boolean; invoiceUrl?: string; error?: string }> {
+    customerEmail?: string,
+    customerNote?: string
+  ): Promise<{ success: boolean; invoiceUrl?: string; draftOrderId?: string; error?: string }> {
     try {
       const client = new this.shopify.clients.Graphql({ session });
 
+      // Preparar line items con precios personalizados
       const lineItemsInput = lineItems.map(item => ({
         variantId: item.variantId,
         quantity: item.quantity,
-        originalUnitPrice: (item.wholesalePrice / 100).toFixed(2),
-        customAttributes: [
-          {
-            key: '_wholesale_price',
-            value: item.wholesalePrice.toString()
-          },
-          {
-            key: '_original_price',
-            value: item.originalPrice.toString()
-          },
-          {
-            key: '_discount',
-            value: (item.originalPrice - item.wholesalePrice).toString()
-          }
-        ]
+        // IMPORTANTE: appliedDiscount aplica descuento sobre el precio original
+        appliedDiscount: {
+          value: ((item.originalPrice - item.wholesalePrice) / item.quantity).toFixed(2),
+          valueType: 'FIXED_AMOUNT',
+          title: 'Precio Mayorista'
+        }
       }));
 
       const mutation = `
@@ -59,8 +52,20 @@ export class DraftOrderService {
           draftOrderCreate(input: $input) {
             draftOrder {
               id
+              name
               invoiceUrl
               totalPrice
+              subtotalPrice
+              lineItems(first: 50) {
+                edges {
+                  node {
+                    title
+                    quantity
+                    originalUnitPrice
+                    discountedUnitPrice
+                  }
+                }
+              }
             }
             userErrors {
               field
@@ -74,12 +79,13 @@ export class DraftOrderService {
         input: {
           lineItems: lineItemsInput,
           email: customerEmail,
-          note: 'Orden con precios mayoristas aplicados',
-          tags: ['wholesale', 'wholesale-pricing-app']
+          note: customerNote || 'Orden con precios mayoristas aplicados por Wholesale Pricing App',
+          tags: ['wholesale', 'wholesale-pricing-app'],
+          useCustomerDefaultAddress: false
         }
       };
 
-      console.log('[Draft Order] Creating with variables:', JSON.stringify(variables, null, 2));
+      console.log('[Draft Order] Creating with:', JSON.stringify(variables, null, 2));
 
       const response = await client.query({
         data: {
@@ -88,21 +94,35 @@ export class DraftOrderService {
         }
       });
 
-      const result = response.body.data.draftOrderCreate;
+      const result = response.body.data?.draftOrderCreate;
+
+      if (!result) {
+        console.error('[Draft Order] No result from API');
+        return {
+          success: false,
+          error: 'No response from Shopify API'
+        };
+      }
 
       if (result.userErrors && result.userErrors.length > 0) {
         console.error('[Draft Order] Errors:', result.userErrors);
         return {
           success: false,
-          error: result.userErrors.map((e: any) => e.message).join(', ')
+          error: result.userErrors.map((e: any) => `${e.field}: ${e.message}`).join(', ')
         };
       }
 
-      console.log('[Draft Order] Created successfully:', result.draftOrder.id);
+      const draftOrder = result.draftOrder;
+      console.log('[Draft Order] Created successfully:', {
+        id: draftOrder.id,
+        name: draftOrder.name,
+        total: draftOrder.totalPrice
+      });
 
       return {
         success: true,
-        invoiceUrl: result.draftOrder.invoiceUrl
+        invoiceUrl: draftOrder.invoiceUrl,
+        draftOrderId: draftOrder.id
       };
 
     } catch (error: any) {

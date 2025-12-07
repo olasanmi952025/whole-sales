@@ -5,9 +5,7 @@ import apiRoutes from './routes/api.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
-import automaticDiscountRoutes from './routes/automatic-discount.routes.js';
 import draftOrderRoutes from './routes/draft-order.routes.js';
-import cartWebhookRoutes from './routes/cart-webhook.routes.js';
 import { verifyShopifySession } from './middleware/shopify-auth.js';
 import dotenv from 'dotenv';
 import serve from 'koa-static';
@@ -65,11 +63,9 @@ async function startServer() {
   app.use(publicRoutes.routes());
   app.use(publicRoutes.allowedMethods());
   
-  app.use(automaticDiscountRoutes.routes());
-  app.use(automaticDiscountRoutes.allowedMethods());
-  
-  app.use(cartWebhookRoutes.routes());
-  app.use(cartWebhookRoutes.allowedMethods());
+  // Rutas de draft orders (incluye endpoints públicos y autenticados)
+  app.use(draftOrderRoutes.routes());
+  app.use(draftOrderRoutes.allowedMethods());
 
   // Rutas de autenticación (sin middleware de sesión)
   app.use(authRoutes.routes());
@@ -89,9 +85,6 @@ async function startServer() {
 
   app.use(apiRoutes.routes());
   app.use(apiRoutes.allowedMethods());
-  
-  app.use(draftOrderRoutes.routes());
-  app.use(draftOrderRoutes.allowedMethods());
   
   app.use(settingsRoutes.routes());
   app.use(settingsRoutes.allowedMethods());
