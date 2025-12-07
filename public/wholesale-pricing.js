@@ -1,14 +1,14 @@
 (function() {
     'use strict';
 
-    // Configuración
-    const API_URL = window.WHOLESALE_API_URL || window.location.origin;
-    const SHOP = window.Shopify ? .shop;
-
-    if (!SHOP) {
-        console.log('[Wholesale] Shop not detected');
-        return;
-    }
+  // Configuración
+  const API_URL = window.WHOLESALE_API_URL || window.location.origin;
+  const SHOP = window.Shopify?.shop;
+  
+  if (!SHOP) {
+    console.log('[Wholesale] Shop not detected');
+    return;
+  }
 
     console.log('[Wholesale] Initializing for shop:', SHOP);
 
@@ -324,11 +324,11 @@
 
     // Inicializar
     function init() {
-        // Obtener producto actual
-        if (window.ShopifyAnalytics && window.ShopifyAnalytics.meta) {
-            currentProductId = window.ShopifyAnalytics.meta.product ? .id ? .toString();
-            currentVariantId = window.ShopifyAnalytics.meta.product ? .variants ? .[0] ? .id ? .toString();
-        }
+    // Obtener producto actual
+    if (window.ShopifyAnalytics && window.ShopifyAnalytics.meta) {
+      currentProductId = window.ShopifyAnalytics.meta.product?.id?.toString();
+      currentVariantId = window.ShopifyAnalytics.meta.product?.variants?.[0]?.id?.toString();
+    }
 
         if (!currentProductId) {
             // Intentar obtener del meta tag
