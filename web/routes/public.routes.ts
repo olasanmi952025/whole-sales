@@ -295,5 +295,38 @@ router.post('/create-wholesale-checkout', async (ctx) => {
   }
 });
 
+// Endpoint de debug para verificar reglas (remover en producción)
+router.get('/debug/rules/:shop', async (ctx) => {
+  try {
+    const { shop } = ctx.params;
+    
+    console.log('[Debug] Checking rules for shop:', shop);
+    
+    const { PricingRulesRepository } = await import('../repositories/pricing-rules.repository.js');
+    const repository = new PricingRulesRepository();
+    
+    const rules = await repository.findAll(shop);
+    
+    ctx.body = {
+      success: true,
+      shop: shop,
+      rules_count: rules.length,
+      rules: rules.map(r => ({
+        id: r.id,
+        name: r.rule_name,
+        target_type: r.target_type,
+        target_id: r.target_id,
+        active: r.active,
+        tiers_count: r.tiers?.length || 0,
+        tiers: r.tiers
+      }))
+    };
+  } catch (error: any) {
+    console.error('[Debug] Error:', error);
+    ctx.status = 500;
+    ctx.body = { success: false, error: error.message };
+  }
+});
+
 export default router;
 
