@@ -260,7 +260,7 @@
         const quantityInput = document.querySelector('input[name="quantity"]') ||
             document.querySelector('input[type="number"]') ||
             document.querySelector('.quantity__input');
-        return parseInt(quantityInput ? .value) || 1;
+        return parseInt(quantityInput?.value || '1') || 1;
     }
 
     // Debounce helper
