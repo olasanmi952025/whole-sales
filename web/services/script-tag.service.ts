@@ -30,16 +30,33 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
+      // Usar el script universal que funciona con todos los temas
       const scripts = [
         {
           url: `https://${this.hostName}/wholesale-pricing.js`,
           name: 'Product Page Script'
         },
         {
-          url: `https://${this.hostName}/wholesale-cart.js`,
-          name: 'Cart Script'
+          url: `https://${this.hostName}/wholesale-universal.js`,
+          name: 'Universal Cart Script'
         }
       ];
+
+      // Limpiar scripts antiguos
+      const oldScriptUrl = `https://${this.hostName}/wholesale-cart.js`;
+      const oldScript = existingScripts.body.script_tags?.find(
+        (tag: any) => tag.src === oldScriptUrl
+      );
+      if (oldScript) {
+        try {
+          await client.delete({
+            path: `script_tags/${oldScript.id}`,
+          });
+          console.log('✅ Removed old cart script');
+        } catch (error) {
+          console.error('Error removing old script:', error);
+        }
+      }
 
       let allInstalled = true;
 
@@ -88,7 +105,8 @@ export class ScriptTagService {
 
       const scriptUrls = [
         `https://${this.hostName}/wholesale-pricing.js`,
-        `https://${this.hostName}/wholesale-cart.js`
+        `https://${this.hostName}/wholesale-cart.js`,
+        `https://${this.hostName}/wholesale-universal.js`
       ];
 
       for (const scriptUrl of scriptUrls) {

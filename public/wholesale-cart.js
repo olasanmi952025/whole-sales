@@ -67,41 +67,65 @@
   // Actualizar display de precios en el carrito
   function updateCartDisplay(cart, wholesaleData) {
     if (!wholesaleData || !wholesaleData.has_wholesale_pricing) {
+      console.log('[Wholesale Cart] No wholesale pricing to apply');
       removeWholesaleNotifications();
       return;
     }
 
-    console.log('[Wholesale Cart] Updating display with wholesale prices');
+    console.log('[Wholesale Cart] Updating display with wholesale prices', wholesaleData);
 
     // Actualizar cada línea del carrito
-    wholesaleData.items.forEach(item => {
+    wholesaleData.items.forEach((item, index) => {
       if (item.wholesale_line_price && item.rule_applied) {
-        updateLineItemDisplay(item, cart);
+        const cartItem = cart.items[index];
+        updateLineItemDisplay(item, cartItem, index);
       }
     });
 
-    // Mostrar resumen de descuento total
+    // Actualizar subtotal del carrito
     if (wholesaleData.total_discount > 0) {
+      updateCartSubtotal(cart, wholesaleData);
       displayTotalDiscount(wholesaleData.total_discount);
     }
   }
 
   // Actualizar display de un item individual
-  function updateLineItemDisplay(item, cart) {
-    // Buscar el item en el DOM
-    const cartItem = cart.items.find(i => i.variant_id === item.variant_id);
-    if (!cartItem) return;
+  function updateLineItemDisplay(item, cartItem, itemIndex) {
+    if (!cartItem) {
+      console.log('[Wholesale Cart] Cart item not found');
+      return;
+    }
 
-    const lineItemSelectors = [
-      `[data-cart-item-key="${cartItem.key}"]`,
-      `[data-variant-id="${item.variant_id}"]`,
-      `.cart-item[data-index="${cart.items.indexOf(cartItem)}"]`
-    ];
+    console.log('[Wholesale Cart] Updating line item:', {
+      variant_id: item.variant_id,
+      wholesale_price: item.wholesale_line_price,
+      original_price: item.original_line_price
+    });
 
+    // Buscar el elemento en el carrito drawer
+    const drawerItems = document.querySelectorAll('.cart-item, [class*="cart"], [class*="Cart"]');
     let lineElement = null;
-    for (const selector of lineItemSelectors) {
-      lineElement = document.querySelector(selector);
-      if (lineElement) break;
+
+    // Método 1: Buscar por atributos de datos
+    if (!lineElement) {
+      lineElement = document.querySelector(`[data-variant-id="${item.variant_id}"]`);
+    }
+
+    // Método 2: Buscar por índice (para cart drawer)
+    if (!lineElement && drawerItems.length > itemIndex) {
+      lineElement = drawerItems[itemIndex];
+    }
+
+    // Método 3: Buscar por key
+    if (!lineElement && cartItem.key) {
+      lineElement = document.querySelector(`[data-key="${cartItem.key}"]`);
+    }
+
+    if (!lineElement) {
+      console.log('[Wholesale Cart] Could not find line element, trying cart drawer');
+      // Para el cart drawer de Shopify, intentar buscar de manera diferente
+      const allCartItems = Array.from(document.querySelectorAll('[class*="cart-item"], [class*="CartItem"]'));
+      lineElement = allCartItems[itemIndex];
     }
 
     if (!lineElement) {
@@ -109,43 +133,89 @@
       return;
     }
 
-    // Buscar el elemento de precio
-    const priceSelectors = [
-      '.cart-item__price',
-      '.cart__item-price',
-      '[data-cart-item-price]',
-      '.line-item__price'
-    ];
+    console.log('[Wholesale Cart] Found line element:', lineElement);
 
-    let priceElement = null;
-    for (const selector of priceSelectors) {
-      priceElement = lineElement.querySelector(selector);
-      if (priceElement) break;
-    }
+    // Buscar todos los elementos de precio en el line item
+    const priceElements = lineElement.querySelectorAll(
+      '.cart-item__price, .price, [class*="price"], [class*="Price"], [class*="total"]'
+    );
 
-    if (priceElement) {
-      const wholesalePrice = item.wholesale_line_price / 100;
-      const originalPrice = item.original_line_price / 100;
-      const discount = item.discount / 100;
+    console.log('[Wholesale Cart] Found price elements:', priceElements.length);
+
+    let updated = false;
+
+    priceElements.forEach(priceElement => {
+      // Evitar elementos muy anidados o que no sean el precio total
+      if (priceElement.querySelector('.price')) return;
 
       // Guardar precio original si no existe
       if (!priceElement.dataset.originalPrice) {
-        priceElement.dataset.originalPrice = priceElement.textContent;
+        priceElement.dataset.originalPrice = priceElement.textContent.trim();
       }
 
       // Actualizar precio
       const formattedPrice = formatMoney(item.wholesale_line_price);
+      const formattedOriginal = formatMoney(item.original_line_price);
+      
       priceElement.innerHTML = `
-        <span class="wholesale-price" style="color: #008060; font-weight: bold;">
+        <span style="color: #008060; font-weight: bold; font-size: 1.1em;">
           ${formattedPrice}
         </span>
-        <span class="original-price" style="text-decoration: line-through; opacity: 0.6; font-size: 0.9em; margin-left: 8px;">
-          ${formatMoney(item.original_line_price)}
+        <br>
+        <span style="text-decoration: line-through; opacity: 0.6; font-size: 0.85em;">
+          ${formattedOriginal}
         </span>
       `;
+      
+      updated = true;
+      console.log('[Wholesale Cart] Updated price element');
+    });
 
+    if (updated) {
       // Agregar badge de mayorista
       addWholesaleBadge(lineElement, item.rule_applied.name);
+    }
+  }
+
+  // Actualizar el subtotal del carrito
+  function updateCartSubtotal(cart, wholesaleData) {
+    // Calcular nuevo subtotal
+    let newSubtotal = 0;
+    wholesaleData.items.forEach(item => {
+      newSubtotal += item.wholesale_line_price || item.original_line_price;
+    });
+
+    console.log('[Wholesale Cart] New subtotal:', newSubtotal);
+
+    // Buscar elemento de subtotal
+    const subtotalSelectors = [
+      '.cart__subtotal',
+      '[data-cart-subtotal]',
+      '.totals__subtotal',
+      '[class*="subtotal"]',
+      '[class*="Subtotal"]'
+    ];
+
+    let subtotalElement = null;
+    for (const selector of subtotalSelectors) {
+      subtotalElement = document.querySelector(selector);
+      if (subtotalElement) {
+        console.log('[Wholesale Cart] Found subtotal element:', selector);
+        break;
+      }
+    }
+
+    if (subtotalElement) {
+      if (!subtotalElement.dataset.originalSubtotal) {
+        subtotalElement.dataset.originalSubtotal = subtotalElement.textContent;
+      }
+
+      subtotalElement.innerHTML = `
+        <span style="color: #008060; font-weight: bold;">
+          ${formatMoney(newSubtotal)}
+        </span>
+      `;
+      console.log('[Wholesale Cart] Updated subtotal');
     }
   }
 
@@ -307,20 +377,84 @@
     };
   }
 
+  // Recalcular y actualizar carrito
+  async function refreshCartPricing() {
+    console.log('[Wholesale Cart] Refreshing cart pricing...');
+    const cart = await getCurrentCart();
+    if (cart && cart.items.length > 0) {
+      const wholesaleData = await calculateWholesaleCart(cart);
+      if (wholesaleData) {
+        updateCartDisplay(cart, wholesaleData);
+      }
+    }
+  }
+
+  // Observar apertura del cart drawer
+  function watchCartDrawer() {
+    // Observar cambios en el body para detectar cuando se abre el cart
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        // Detectar si se agregó o modificó el cart drawer
+        if (mutation.target.classList && 
+            (mutation.target.classList.contains('cart') || 
+             mutation.target.id === 'cart' ||
+             mutation.target.getAttribute('role') === 'dialog')) {
+          console.log('[Wholesale Cart] Cart drawer detected, refreshing prices');
+          setTimeout(refreshCartPricing, 500);
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    console.log('[Wholesale Cart] Watching for cart drawer');
+  }
+
+  // Interceptar eventos de cart drawer
+  function interceptCartEvents() {
+    // Escuchar eventos de Shopify
+    document.addEventListener('cart:updated', () => {
+      console.log('[Wholesale Cart] Cart updated event');
+      setTimeout(refreshCartPricing, 300);
+    });
+
+    document.addEventListener('cart:refresh', () => {
+      console.log('[Wholesale Cart] Cart refresh event');
+      setTimeout(refreshCartPricing, 300);
+    });
+
+    // Escuchar clicks en el cart icon para detectar apertura
+    const cartLinks = document.querySelectorAll('[href="/cart"], [href*="cart"], .cart-link, #cart-icon-bubble');
+    cartLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        console.log('[Wholesale Cart] Cart opened via link');
+        setTimeout(refreshCartPricing, 800);
+      });
+    });
+  }
+
   // Inicializar
   async function init() {
     console.log('[Wholesale Cart] Initializing cart monitoring');
     
-    // Obtener y calcular carrito inicial
-    const cart = await getCurrentCart();
-    if (cart && cart.items.length > 0) {
-      const wholesaleData = await calculateWholesaleCart(cart);
-      updateCartDisplay(cart, wholesaleData);
-    }
+    // Esperar un poco para que el tema cargue
+    setTimeout(async () => {
+      // Obtener y calcular carrito inicial
+      await refreshCartPricing();
 
-    // Monitorear cambios
-    watchCartChanges();
-    interceptCartUpdates();
+      // Monitorear cambios
+      watchCartChanges();
+      watchCartDrawer();
+      interceptCartUpdates();
+      interceptCartEvents();
+
+      console.log('[Wholesale Cart] Fully initialized');
+    }, 1000);
   }
 
   // Iniciar cuando el DOM esté listo
@@ -329,6 +463,11 @@
   } else {
     init();
   }
+
+  // También iniciar cuando la página esté completamente cargada
+  window.addEventListener('load', () => {
+    setTimeout(refreshCartPricing, 500);
+  });
 
   console.log('[Wholesale Cart] Script loaded successfully');
 })();

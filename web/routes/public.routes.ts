@@ -194,5 +194,106 @@ router.post('/calculate-cart', async (ctx) => {
   }
 });
 
+// Endpoint para crear un Draft Order con precios mayoristas
+router.post('/create-wholesale-checkout', async (ctx) => {
+  try {
+    const { shop, items, customer_email } = ctx.request.body as any;
+
+    console.log('[Create Checkout] Request:', { shop, itemCount: items?.length, customer_email });
+
+    if (!shop || !items || !Array.isArray(items) || items.length === 0) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: 'Missing required parameters: shop, items' };
+      return;
+    }
+
+    // Primero, calcular los precios mayoristas
+    const { PricingRulesRepository } = await import('../repositories/pricing-rules.repository.js');
+    const repository = new PricingRulesRepository();
+
+    const lineItems = [];
+    let hasWholesalePricing = false;
+
+    for (const item of items) {
+      const { variant_id, product_id, quantity, price, title } = item;
+
+      if (!quantity || quantity <= 0) continue;
+
+      // Buscar regla aplicable
+      let rule = null;
+      let wholesalePrice = null;
+      let originalPrice = price * quantity;
+
+      if (variant_id) {
+        const normalizedVariantId = normalizeToGid(variant_id, 'ProductVariant');
+        rule = await repository.findByTarget(shop, 'variant', normalizedVariantId);
+      }
+
+      if (!rule && product_id) {
+        const normalizedProductId = normalizeToGid(product_id, 'Product');
+        rule = await repository.findByTarget(shop, 'product', normalizedProductId);
+      }
+
+      // Calcular precio con regla si existe
+      if (rule && rule.tiers && rule.tiers.length > 0) {
+        const sortedTiers = [...rule.tiers].sort((a, b) => b.min_quantity - a.min_quantity);
+        const applicableTier = sortedTiers.find(t => quantity >= t.min_quantity);
+
+        if (applicableTier) {
+          wholesalePrice = applicableTier.price;
+          hasWholesalePricing = true;
+        }
+      }
+
+      // Normalizar variant ID a GID
+      let variantGid = variant_id?.toString() || '';
+      if (variantGid && !variantGid.startsWith('gid://')) {
+        variantGid = `gid://shopify/ProductVariant/${variantGid}`;
+      }
+
+      lineItems.push({
+        variantId: variantGid,
+        quantity,
+        originalPrice: Math.round(originalPrice * 100), // en centavos
+        wholesalePrice: wholesalePrice ? Math.round(wholesalePrice * quantity * 100) : Math.round(originalPrice * 100),
+        title: title || 'Product'
+      });
+    }
+
+    // Si no hay precios mayoristas, devolver URL normal del checkout
+    if (!hasWholesalePricing) {
+      ctx.body = {
+        success: true,
+        data: {
+          checkout_url: `https://${shop}/cart`,
+          has_wholesale_pricing: false
+        }
+      };
+      return;
+    }
+
+    // Crear Draft Order con precios mayoristas
+    // Nota: Esto requiere autenticación de la tienda
+    // Por ahora, devolvemos los datos para que el usuario pueda proceder
+    ctx.body = {
+      success: true,
+      data: {
+        line_items: lineItems,
+        has_wholesale_pricing: true,
+        total_savings: lineItems.reduce((sum, item) => 
+          sum + (item.originalPrice - item.wholesalePrice), 0
+        ),
+        message: 'Please contact us to complete your wholesale order',
+        contact_url: `https://${shop}/pages/contact`
+      }
+    };
+
+  } catch (error: any) {
+    console.error('[Create Checkout] Error:', error);
+    ctx.status = 500;
+    ctx.body = { success: false, error: 'Internal server error' };
+  }
+});
+
 export default router;
 
