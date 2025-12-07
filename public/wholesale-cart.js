@@ -3,7 +3,7 @@
 
     // Configuración
     const API_URL = window.WHOLESALE_API_URL || 'https://whole-sales-production.up.railway.app';
-    const SHOP = window.Shopify ? .shop;
+    const SHOP = window.Shopify.shop;
 
     if (!SHOP) {
         console.log('[Wholesale Cart] Shop not detected');
