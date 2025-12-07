@@ -96,13 +96,29 @@ async function startServer() {
           }
         }
         
+        // Si hay parámetro shop, verificar sesión antes de cargar React
+        const shop = ctx.query.shop as string;
+        if (shop && ctx.path === '/') {
+          // Verificar si existe sesión
+          const { getCurrentSession } = await import('./middleware/shopify-auth.js');
+          const session = await getCurrentSession(shop);
+          
+          if (!session || !session.accessToken) {
+            // No hay sesión válida, redirigir a OAuth
+            console.log('🔄 No session found, redirecting to OAuth for shop:', shop);
+            ctx.redirect(`/api/auth?shop=${encodeURIComponent(shop)}`);
+            return;
+          }
+          
+          console.log('✅ Valid session found for shop:', shop);
+        }
+        
         // Servir la app React
         const indexPath = join(frontendPath, 'index.html');
         ctx.type = 'html';
         let html = readFileSync(indexPath, 'utf-8');
         
         // Inyectar el shop en el HTML si está disponible
-        const shop = ctx.query.shop as string || ctx.state.shopify?.session?.shop;
         if (shop) {
           // Inyectar shop como variable global antes de cargar los scripts
           const shopScript = `<script>window.SHOPIFY_SHOP = "${shop}";</script>`;

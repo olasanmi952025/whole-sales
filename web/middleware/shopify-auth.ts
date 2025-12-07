@@ -1,9 +1,14 @@
 import '@shopify/shopify-api/adapters/node';
 import { shopifyApi, LATEST_API_VERSION, Session } from '@shopify/shopify-api';
 import type { Context, Next } from 'koa';
+import { MemorySessionStorage } from '../services/memory-session-storage.js';
 import { SQLiteSessionStorage } from '../services/session-storage.service.js';
 
-const sessionStorage = new SQLiteSessionStorage();
+// Usar MemorySessionStorage para OAuth (state management)
+const memoryStorage = new MemorySessionStorage();
+
+// Usar SQLiteSessionStorage para persistir sesiones después de OAuth
+const sqliteStorage = new SQLiteSessionStorage();
 
 // Obtener y validar HOST
 const rawHost = process.env.HOST || '';
@@ -29,7 +34,7 @@ export const shopify = shopifyApi({
   isEmbeddedApp: false,
   isCustomStoreApp: false,
   useOnlineTokens: false,
-  sessionStorage: sessionStorage, // ¡CRÍTICO! Sin esto, OAuth no funciona
+  sessionStorage: memoryStorage, // Usar memoria para OAuth state management
 });
 
 // Middleware para verificar y cargar sesión
@@ -43,9 +48,9 @@ export async function verifyShopifySession(ctx: Context, next: Next) {
       return;
     }
 
-    // Buscar sesión offline para la tienda
+    // Buscar sesión offline persistida en SQLite
     const sessionId = shopify.session.getOfflineId(shop);
-    const session = await sessionStorage.loadSession(sessionId);
+    const session = await sqliteStorage.loadSession(sessionId);
 
     if (!session || !session.accessToken) {
       // No hay sesión, redirigir a OAuth
@@ -85,16 +90,20 @@ export async function verifyShopifySession(ctx: Context, next: Next) {
   }
 }
 
-// Helper para obtener la sesión actual
+// Helper para obtener la sesión actual (de SQLite, persisted)
 export async function getCurrentSession(shop: string): Promise<Session | undefined> {
   const sessionId = shopify.session.getOfflineId(shop);
-  return await sessionStorage.loadSession(sessionId);
+  return await sqliteStorage.loadSession(sessionId);
 }
 
-// Helper para guardar sesión
+// Helper para guardar sesión (en SQLite para persistencia)
 export async function saveSession(session: Session): Promise<boolean> {
-  return await sessionStorage.storeSession(session);
+  // Guardar en SQLite para persistencia
+  await sqliteStorage.storeSession(session);
+  // También guardar en memoria para que esté disponible inmediatamente
+  await memoryStorage.storeSession(session);
+  return true;
 }
 
-export { sessionStorage };
+export { memoryStorage, sqliteStorage };
 

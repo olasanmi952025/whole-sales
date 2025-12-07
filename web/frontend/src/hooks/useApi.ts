@@ -35,7 +35,26 @@ export function useApi<T>() {
           'Content-Type': 'application/json',
           ...options?.headers,
         },
+        redirect: 'manual', // No seguir redirecciones automáticamente
       });
+
+      // Si es un redirect (301, 302, etc), redirigir el navegador
+      if (response.type === 'opaqueredirect' || response.status === 302 || response.status === 301) {
+        const location = response.headers.get('Location');
+        if (location) {
+          window.location.href = location;
+          return null;
+        }
+      }
+
+      // Si es 401, redirigir a auth
+      if (response.status === 401) {
+        const data = await response.json() as ApiResponse<T>;
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        }
+        return null;
+      }
 
       const data = await response.json() as ApiResponse<T>;
 
