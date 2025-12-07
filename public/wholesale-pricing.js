@@ -325,20 +325,38 @@
     // Inicializar
     function init() {
     // Obtener producto actual
-    if (window.ShopifyAnalytics && window.ShopifyAnalytics.meta) {
-      currentProductId = window.ShopifyAnalytics.meta.product?.id?.toString();
-      currentVariantId = window.ShopifyAnalytics.meta.product?.variants?.[0]?.id?.toString();
+    if (window.ShopifyAnalytics && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product) {
+      const productGid = window.ShopifyAnalytics.meta.product.gid;
+      const productId = window.ShopifyAnalytics.meta.product.id;
+      
+      // Priorizar el GID si está disponible, sino usar el ID
+      if (productGid) {
+        currentProductId = productGid;
+        console.log('[Wholesale] Product GID from analytics:', productGid);
+      } else if (productId) {
+        currentProductId = productId.toString();
+        console.log('[Wholesale] Product ID from analytics:', productId);
+      }
+      
+      // Obtener variant ID también
+      if (window.ShopifyAnalytics.meta.product.variants && window.ShopifyAnalytics.meta.product.variants[0]) {
+        const variantGid = window.ShopifyAnalytics.meta.product.variants[0].gid;
+        const variantId = window.ShopifyAnalytics.meta.product.variants[0].id;
+        currentVariantId = variantGid || variantId?.toString();
+        console.log('[Wholesale] Variant ID:', currentVariantId);
+      }
     }
 
         if (!currentProductId) {
-            // Intentar obtener del meta tag
-            const productMeta = document.querySelector('meta[property="og:url"]');
-            if (productMeta) {
-                const match = productMeta.content.match(/products\/([^?]+)/);
-                if (match) {
-                    currentProductId = match[1];
-                }
+            // Intentar obtener del objeto window.meta si está disponible
+            if (window.meta && window.meta.product && window.meta.product.id) {
+                currentProductId = window.meta.product.id.toString();
+                console.log('[Wholesale] Product ID from window.meta:', currentProductId);
             }
+        }
+        
+        if (!currentProductId) {
+            console.log('[Wholesale] Could not detect product ID');
         }
 
         if (currentProductId || currentVariantId) {
