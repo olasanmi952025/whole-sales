@@ -5,11 +5,25 @@ import { SQLiteSessionStorage } from '../services/session-storage.service.js';
 
 const sessionStorage = new SQLiteSessionStorage();
 
+// Obtener y validar HOST
+const rawHost = process.env.HOST || '';
+const hostName = rawHost.replace(/https?:\/\//, '') || 'localhost';
+
+console.log('🔧 Shopify API Configuration:');
+console.log('   - Raw HOST:', rawHost);
+console.log('   - Processed hostName:', hostName);
+console.log('   - API Key:', process.env.SHOPIFY_API_KEY ? 'Set' : 'Missing');
+
+if (hostName === 'localhost') {
+  console.warn('⚠️  WARNING: Using localhost as hostName. OAuth will not work in production!');
+  console.warn('   Set HOST environment variable to your Railway URL');
+}
+
 export const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   scopes: process.env.SCOPES?.split(',') || ['read_products', 'write_products', 'read_orders', 'write_orders'],
-  hostName: process.env.HOST?.replace(/https?:\/\//, '') || 'localhost',
+  hostName: hostName,
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
   isCustomStoreApp: false,
