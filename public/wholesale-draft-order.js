@@ -106,13 +106,18 @@
     // Crear contenedor del botón
     const container = document.createElement('div');
     container.id = 'wholesale-checkout-container';
+    
+    // Detectar si estamos en cart drawer para ajustar estilos
+    const isDrawer = isCartDrawerOpen();
+    
     container.style.cssText = `
-      margin: 20px 0;
-      padding: 20px;
+      margin: ${isDrawer ? '12px' : '20px'} 0;
+      padding: ${isDrawer ? '16px' : '20px'};
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 12px;
+      border-radius: ${isDrawer ? '8px' : '12px'};
       color: white;
       box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+      font-size: ${isDrawer ? '13px' : '14px'};
     `;
 
     container.innerHTML = `
@@ -171,23 +176,83 @@
 
     wholesaleButton = container;
 
-    // Insertar antes del botón de checkout estándar
-    const checkoutButton = document.querySelector('button[name="checkout"]') ||
-                          document.querySelector('[name="checkout"]') ||
-                          document.querySelector('.cart__checkout');
+    // Insertar en diferentes ubicaciones dependiendo del contexto
+    let inserted = false;
 
-    if (checkoutButton && checkoutButton.parentNode) {
-      checkoutButton.parentNode.insertBefore(container, checkoutButton);
-      // Ocultar botón estándar
-      if (checkoutButton.tagName === 'BUTTON' || checkoutButton.tagName === 'INPUT') {
-        checkoutButton.style.display = 'none';
+    // Para cart drawer, buscar ubicaciones específicas
+    if (isCartDrawerOpen()) {
+      const drawerSelectors = [
+        '.drawer__footer',
+        '[class*="cart-drawer__footer"]',
+        '[class*="CartDrawer__Footer"]',
+        '.cart-drawer__checkout',
+        '[data-cart-footer]'
+      ];
+
+      for (const selector of drawerSelectors) {
+        const footer = document.querySelector(selector);
+        if (footer) {
+          footer.insertBefore(container, footer.firstChild);
+          inserted = true;
+          console.log('[Wholesale] Injected into cart drawer footer');
+          break;
+        }
       }
-    } else {
-      // Buscar el contenedor del carrito
-      const cartContainer = document.querySelector('.cart, [data-cart], #cart, main');
-      if (cartContainer) {
-        cartContainer.appendChild(container);
+
+      // Si no encuentra el footer, buscar el checkout button
+      if (!inserted) {
+        const checkoutButton = document.querySelector('button[name="checkout"]') ||
+                              document.querySelector('[class*="checkout"]');
+        if (checkoutButton && checkoutButton.parentNode) {
+          checkoutButton.parentNode.insertBefore(container, checkoutButton);
+          inserted = true;
+          console.log('[Wholesale] Injected before checkout button in drawer');
+        }
       }
+    }
+
+    // Para página de carrito completa
+    if (!inserted) {
+      const checkoutButton = document.querySelector('button[name="checkout"]') ||
+                            document.querySelector('[name="checkout"]') ||
+                            document.querySelector('.cart__checkout');
+
+      if (checkoutButton && checkoutButton.parentNode) {
+        checkoutButton.parentNode.insertBefore(container, checkoutButton);
+        inserted = true;
+        console.log('[Wholesale] Injected before checkout button');
+        
+        // Ocultar botón estándar solo en página completa
+        if (!isCartDrawerOpen() && (checkoutButton.tagName === 'BUTTON' || checkoutButton.tagName === 'INPUT')) {
+          checkoutButton.style.display = 'none';
+        }
+      }
+    }
+
+    // Fallback: buscar cualquier contenedor de carrito
+    if (!inserted) {
+      const cartContainers = [
+        '.drawer__inner',
+        '.cart-drawer__content',
+        '.cart',
+        '[data-cart]',
+        '#cart',
+        'main'
+      ];
+
+      for (const selector of cartContainers) {
+        const cartContainer = document.querySelector(selector);
+        if (cartContainer) {
+          cartContainer.appendChild(container);
+          inserted = true;
+          console.log('[Wholesale] Injected into cart container:', selector);
+          break;
+        }
+      }
+    }
+
+    if (!inserted) {
+      console.error('[Wholesale] Could not find a place to inject button');
     }
 
     // Agregar evento al botón
@@ -362,18 +427,40 @@
     document.body.appendChild(modal);
   }
 
+  // Detectar cart drawer
+  function isCartDrawerOpen() {
+    const cartDrawerSelectors = [
+      '.drawer.active',
+      '[id*="cart-drawer"]',
+      '[class*="CartDrawer"]',
+      '[data-cart-drawer]',
+      'cart-drawer'
+    ];
+
+    for (const selector of cartDrawerSelectors) {
+      const element = document.querySelector(selector);
+      if (element && element.offsetParent !== null) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   // Inicializar
   async function init() {
     console.log('[Wholesale Draft Order] Checking cart...');
 
-    // Solo ejecutar en página de carrito
-    const isCartPage = window.location.pathname.includes('/cart') ||
-                      document.querySelector('.cart, [data-cart]');
+    // Ejecutar en página de carrito O cuando el cart drawer esté abierto
+    const isCartPage = window.location.pathname.includes('/cart');
+    const isDrawerOpen = isCartDrawerOpen();
 
-    if (!isCartPage) {
-      console.log('[Wholesale Draft Order] Not on cart page');
+    if (!isCartPage && !isDrawerOpen) {
+      console.log('[Wholesale Draft Order] Not on cart page or drawer not open');
       return;
     }
+
+    console.log('[Wholesale Draft Order] Cart detected:', { isCartPage, isDrawerOpen });
 
     const cart = await getCurrentCart();
     if (!cart || !cart.items || cart.items.length === 0) {
@@ -406,6 +493,35 @@
   document.addEventListener('cart:updated', () => {
     setTimeout(init, 500);
   });
+
+  // Observar cambios en el DOM para detectar cuando se abre el cart drawer
+  const observer = new MutationObserver((mutations) => {
+    // Verificar si se abrió el cart drawer
+    if (isCartDrawerOpen()) {
+      console.log('[Wholesale Draft Order] Cart drawer opened');
+      setTimeout(init, 300);
+    }
+  });
+
+  // Observar cambios en el body
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style']
+  });
+
+  // Interceptar clicks en botones de "View cart" para ejecutar después
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target && (
+      target.textContent?.toLowerCase().includes('cart') ||
+      target.getAttribute('href')?.includes('/cart') ||
+      target.classList.toString().toLowerCase().includes('cart')
+    )) {
+      setTimeout(init, 800);
+    }
+  }, true);
 
   console.log('[Wholesale Draft Order] Script loaded successfully');
 })();
