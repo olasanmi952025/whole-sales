@@ -127,6 +127,17 @@ router.get('/callback', async (ctx: Context) => {
       console.log('✅ Session saved for shop:', session.shop);
       console.log('🔑 Access Token obtained:', session.accessToken?.substring(0, 20) + '...');
 
+      // Instalar script tag automáticamente
+      try {
+        const { ScriptTagService } = await import('../services/script-tag.service.js');
+        const scriptService = new ScriptTagService();
+        await scriptService.installScriptTag(session);
+        console.log('📝 Script tag installation attempted');
+      } catch (scriptError: any) {
+        console.error('⚠️  Error installing script tag:', scriptError.message);
+        // No fallar el OAuth si falla el script tag
+      }
+
       // Redirigir a la app
       const appUrl = `/?shop=${session.shop}&host=${host || ''}`;
       

@@ -3,6 +3,7 @@ import bodyParser from 'koa-bodyparser';
 import { initializeDatabase } from './database/database-sqljs.js';
 import apiRoutes from './routes/api.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import publicRoutes from './routes/public.routes.js';
 import { verifyShopifySession } from './middleware/shopify-auth.js';
 import dotenv from 'dotenv';
 import serve from 'koa-static';
@@ -56,14 +57,20 @@ async function startServer() {
     }
   });
 
+  // Rutas públicas (sin autenticación) - deben ir ANTES
+  app.use(publicRoutes.routes());
+  app.use(publicRoutes.allowedMethods());
+
   // Rutas de autenticación (sin middleware de sesión)
   app.use(authRoutes.routes());
   app.use(authRoutes.allowedMethods());
 
   // Rutas de API (con middleware de sesión)
   app.use(async (ctx, next) => {
-    // Solo aplicar verificación de sesión a rutas de API
-    if (ctx.path.startsWith('/api/') && !ctx.path.startsWith('/api/auth')) {
+    // Solo aplicar verificación de sesión a rutas de API (excepto auth y public)
+    if (ctx.path.startsWith('/api/') && 
+        !ctx.path.startsWith('/api/auth') && 
+        !ctx.path.startsWith('/api/public')) {
       await verifyShopifySession(ctx, next);
     } else {
       await next();

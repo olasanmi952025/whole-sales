@@ -45,6 +45,16 @@ if (existsSync('web/frontend/install.html')) {
   }
 }
 
+// Copiar public/wholesale-pricing.js al frontend
+if (existsSync('public/wholesale-pricing.js')) {
+  try {
+    cpSync('public/wholesale-pricing.js', 'dist/web/frontend/wholesale-pricing.js');
+    console.log('✅ Copied wholesale-pricing.js to frontend');
+  } catch (err) {
+    console.log('⚠️  Could not copy wholesale-pricing.js:', err.message);
+  }
+}
+
 // Copiar public si existe
 try {
   cpSync('public', 'dist/public', { recursive: true });

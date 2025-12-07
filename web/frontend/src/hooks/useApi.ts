@@ -33,6 +33,7 @@ export function useApi<T>() {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json', // IMPORTANTE: Indicar que esperamos JSON, no HTML
           ...options?.headers,
         },
         redirect: 'manual', // No seguir redirecciones automáticamente

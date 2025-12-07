@@ -1,17 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from './useApi';
+import { useShop } from '../context/ShopContext';
 import type { PricingRule } from '../types';
 
 export function usePricingRules() {
   const [rules, setRules] = useState<PricingRule[]>([]);
   const { loading, error, request } = useApi<PricingRule[]>();
+  const { shop } = useShop();
 
   const fetchRules = useCallback(async () => {
+    if (!shop) {
+      console.log('⚠️ No shop available, skipping fetch');
+      return;
+    }
+    
     const data = await request('/api/rules');
     if (data) {
       setRules(data);
     }
-  }, [request]);
+  }, [request, shop]);
 
   const createRule = useCallback(async (rule: PricingRule): Promise<boolean> => {
     const data = await request('/api/rules', {
@@ -52,8 +59,11 @@ export function usePricingRules() {
   }, [fetchRules]);
 
   useEffect(() => {
-    fetchRules();
-  }, [fetchRules]);
+    // Solo hacer fetch si hay shop disponible
+    if (shop) {
+      fetchRules();
+    }
+  }, [fetchRules, shop]);
 
   return {
     rules,

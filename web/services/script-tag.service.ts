@@ -23,14 +23,14 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      const scriptUrl = `https://${process.env.HOST}/storefront-script.js`;
+      const scriptUrl = `https://${process.env.HOST}/wholesale-pricing.js`;
       
       const alreadyInstalled = existingScripts.body.script_tags?.some(
         (tag: any) => tag.src === scriptUrl
       );
 
       if (alreadyInstalled) {
-        console.log('Script tag already installed');
+        console.log('✅ Script tag already installed');
         return true;
       }
 
@@ -45,7 +45,7 @@ export class ScriptTagService {
         }
       });
 
-      console.log('Script tag installed successfully');
+      console.log('✅ Script tag installed successfully:', scriptUrl);
       return true;
     } catch (error) {
       console.error('Error installing script tag:', error);
@@ -61,7 +61,7 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      const scriptUrl = `https://${process.env.HOST}/storefront-script.js`;
+      const scriptUrl = `https://${process.env.HOST}/wholesale-pricing.js`;
       
       const scriptTag = existingScripts.body.script_tags?.find(
         (tag: any) => tag.src === scriptUrl
