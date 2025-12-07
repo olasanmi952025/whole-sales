@@ -1,6 +1,7 @@
 import { Autocomplete, Icon, InlineStack, Text, Spinner } from '@shopify/polaris';
 import { SearchMinor } from '@shopify/polaris-icons';
 import { useState, useEffect, useMemo } from 'react';
+import { useShop } from '../context/ShopContext';
 
 interface Product {
   id: string;
@@ -21,6 +22,7 @@ interface ProductSelectorProps {
 }
 
 export default function ProductSelector({ targetType, value, onChange, error }: ProductSelectorProps) {
+  const { shop } = useShop();
   const [products, setProducts] = useState<Product[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,16 +32,21 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
 
   useEffect(() => {
     const loadData = async () => {
+      if (!shop) {
+        console.log('⚠️ No shop available yet');
+        return;
+      }
+
       setLoading(true);
       try {
         if (targetType === 'collection') {
-          const res = await fetch('/api/collections');
+          const res = await fetch(`/api/collections?shop=${encodeURIComponent(shop)}`);
           const data = await res.json();
           if (data.success) {
             setCollections(data.data);
           }
         } else {
-          const res = await fetch('/api/products');
+          const res = await fetch(`/api/products?shop=${encodeURIComponent(shop)}`);
           const data = await res.json();
           if (data.success) {
             setProducts(data.data);
@@ -53,7 +60,7 @@ export default function ProductSelector({ targetType, value, onChange, error }: 
     };
 
     loadData();
-  }, [targetType]);
+  }, [targetType, shop]);
 
   const productOptions = useMemo(() => products.map(p => ({
     value: p.id,
