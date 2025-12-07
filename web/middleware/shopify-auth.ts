@@ -26,9 +26,10 @@ export const shopify = shopifyApi({
   hostName: hostName,
   hostScheme: 'https',
   apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: false, // Cambiar a false para apps standalone
+  isEmbeddedApp: false,
   isCustomStoreApp: false,
   useOnlineTokens: false,
+  sessionStorage: sessionStorage, // ¡CRÍTICO! Sin esto, OAuth no funciona
 });
 
 // Middleware para verificar y cargar sesión
