@@ -1,14 +1,12 @@
-import { Page, Layout, Card, Button, Banner, EmptyState, Spinner, InlineStack } from '@shopify/polaris';
+import { Page, Layout, Card, Button, Banner, EmptyState, Spinner } from '@shopify/polaris';
 import { useState } from 'react';
 import { usePricingRules } from '../hooks/usePricingRules';
-import { useSessionStatus } from '../hooks/useSessionStatus';
 import RulesList from '../components/RulesList';
 import RuleForm from '../components/RuleForm';
 import type { PricingRule } from '../types';
 
 export default function RulesPage() {
   const { rules, loading, error, createRule, updateRule, deleteRule } = usePricingRules();
-  const { needsAuth, checking, reinstallApp } = useSessionStatus();
   const [showForm, setShowForm] = useState(false);
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
 
@@ -60,17 +58,6 @@ export default function RulesPage() {
     );
   }
 
-  // Acciones del header
-  const actions = [];
-  
-  if (needsAuth && !checking) {
-    actions.push({
-      content: 'Reinstalar App',
-      onAction: reinstallApp,
-      tone: 'critical' as const,
-    });
-  }
-
   return (
     <Page
       title="Pricing Rules"
@@ -78,24 +65,8 @@ export default function RulesPage() {
         content: 'Create Rule',
         onAction: handleCreate,
       }}
-      secondaryActions={actions}
     >
       <Layout>
-        {needsAuth && !checking && (
-          <Layout.Section>
-            <Banner
-              title="App no autorizada"
-              tone="warning"
-              action={{
-                content: 'Reinstalar ahora',
-                onAction: reinstallApp
-              }}
-            >
-              <p>La app necesita ser autorizada para acceder a los productos de Shopify.</p>
-            </Banner>
-          </Layout.Section>
-        )}
-        
         {error && (
           <Layout.Section>
             <Banner status="critical">{error}</Banner>

@@ -14,8 +14,15 @@ export default function RulesList({ rules, onEdit, onDelete }: RulesListProps) {
         resourceName={{ singular: 'rule', plural: 'rules' }}
         items={rules}
         renderItem={(rule) => {
-          const { id, rule_name, target_type, active, tiers } = rule;
+          const { id, rule_name, target_type, target_name, target_id, active, tiers } = rule;
           const tierCount = tiers?.length || 0;
+          
+          // Formatear el tipo de target
+          const targetTypeLabel = target_type === 'product' ? 'Producto' : 
+                                  target_type === 'variant' ? 'Variante' : 'Colección';
+          
+          // Usar el nombre si está disponible, sino el ID
+          const targetDisplay = target_name || target_id;
 
           return (
             <ResourceItem
@@ -23,19 +30,20 @@ export default function RulesList({ rules, onEdit, onDelete }: RulesListProps) {
               onClick={() => onEdit(rule)}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+                <div style={{ flex: 1 }}>
                   <Text variant="bodyMd" fontWeight="bold" as="h3">
                     {rule_name}
                   </Text>
+                  <Text variant="bodySm" as="p" tone="subdued" fontWeight="medium">
+                    {targetTypeLabel}: {targetDisplay}
+                  </Text>
                   <div style={{ marginTop: '4px' }}>
                     <Badge tone={active ? 'success' : 'attention'}>
-                      {active ? 'Active' : 'Inactive'}
+                      {active ? 'Activa' : 'Inactiva'}
                     </Badge>
                     {' '}
-                    <Badge>{target_type}</Badge>
-                    {' '}
                     <Text variant="bodySm" as="span" tone="subdued">
-                      {tierCount} tier{tierCount !== 1 ? 's' : ''}
+                      {tierCount} nivel{tierCount !== 1 ? 'es' : ''} de precio
                     </Text>
                   </div>
                 </div>

@@ -14,6 +14,7 @@ export interface PricingRule {
   shop?: string;
   target_type: TargetType;
   target_id: string;
+  target_name?: string;
   rule_name: string;
   priority?: number;
   active?: boolean;

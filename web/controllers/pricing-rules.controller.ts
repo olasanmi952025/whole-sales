@@ -1,18 +1,40 @@
 import type { Context } from 'koa';
 import { PricingRulesRepository } from '../repositories/pricing-rules.repository.js';
+import { ProductInfoService } from '../services/product-info.service.js';
 import type { PricingRule } from '../types/pricing.js';
 
 export class PricingRulesController {
   private repository: PricingRulesRepository;
+  private productInfoService: ProductInfoService;
 
   constructor() {
     this.repository = new PricingRulesRepository();
+    this.productInfoService = new ProductInfoService();
   }
 
   async getAll(ctx: Context): Promise<void> {
     const shop = ctx.state.shopify.session.shop;
+    const session = ctx.state.shopify.session;
     const rules = await this.repository.findAll(shop);
-    ctx.body = { success: true, data: rules };
+    
+    // Enriquecer las reglas con los nombres de los productos/variantes/colecciones
+    const enrichedRules = await Promise.all(
+      rules.map(async (rule) => {
+        try {
+          const targetName = await this.productInfoService.getTargetName(
+            session,
+            rule.target_type,
+            rule.target_id
+          );
+          return { ...rule, target_name: targetName };
+        } catch (error) {
+          console.error('Error enriching rule:', error);
+          return rule;
+        }
+      })
+    );
+    
+    ctx.body = { success: true, data: enrichedRules };
   }
 
   async getById(ctx: Context): Promise<void> {
