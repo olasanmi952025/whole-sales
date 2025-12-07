@@ -83,9 +83,22 @@ async function startServer() {
   app.use(async ctx => {
     if (!ctx.body && ctx.method === 'GET' && !ctx.path.startsWith('/api/')) {
       try {
+        const { readFileSync } = await import('fs');
+        const { existsSync } = await import('fs');
+        
+        // Si es la raíz sin parámetro shop, mostrar página de instalación
+        if (ctx.path === '/' && !ctx.query.shop) {
+          const installPath = join(frontendPath, 'install.html');
+          if (existsSync(installPath)) {
+            ctx.type = 'html';
+            ctx.body = readFileSync(installPath, 'utf-8');
+            return;
+          }
+        }
+        
+        // Servir la app React
         const indexPath = join(frontendPath, 'index.html');
         ctx.type = 'html';
-        const { readFileSync } = await import('fs');
         let html = readFileSync(indexPath, 'utf-8');
         
         // Inyectar el shop en el HTML si está disponible

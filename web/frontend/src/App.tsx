@@ -33,7 +33,7 @@ export default function App() {
         <Banner tone="critical">
           <p>Error: No se pudo identificar la tienda. Por favor, reinstala la app.</p>
           <p style={{ marginTop: '1rem' }}>
-            <a href={`/api/auth?shop=${window.location.hostname}`}>Reinstalar App</a>
+            Para instalar la app, visita desde el admin de Shopify o usa la URL de instalación correcta con el parámetro shop.
           </p>
         </Banner>
       </Page>

@@ -35,6 +35,16 @@ if (existsSync('web/dist/frontend')) {
   console.log('⚠️  Frontend not built yet (will be built later)');
 }
 
+// Copiar install.html
+if (existsSync('web/frontend/install.html')) {
+  try {
+    cpSync('web/frontend/install.html', 'dist/web/frontend/install.html');
+    console.log('✅ Copied install.html');
+  } catch (err) {
+    console.log('⚠️  Could not copy install.html:', err.message);
+  }
+}
+
 // Copiar public si existe
 try {
   cpSync('public', 'dist/public', { recursive: true });
