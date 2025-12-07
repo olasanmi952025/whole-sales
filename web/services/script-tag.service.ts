@@ -3,13 +3,20 @@ import { shopifyApi, LATEST_API_VERSION } from '@shopify/shopify-api';
 
 export class ScriptTagService {
   private shopify: any;
+  private hostName: string;
 
   constructor() {
+    // Obtener y validar HOST
+    const rawHost = process.env.HOST || '';
+    this.hostName = rawHost.replace(/https?:\/\//, '') || 'whole-sales-production.up.railway.app';
+    
+    console.log('🏷️  ScriptTagService using host:', this.hostName);
+    
     this.shopify = shopifyApi({
       apiKey: process.env.SHOPIFY_API_KEY!,
       apiSecretKey: process.env.SHOPIFY_API_SECRET!,
       scopes: process.env.SCOPES?.split(',') || [],
-      hostName: process.env.HOST?.replace(/https?:\/\//, '') || 'localhost',
+      hostName: this.hostName,
       apiVersion: LATEST_API_VERSION,
       isEmbeddedApp: true,
     });
@@ -23,7 +30,7 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      const scriptUrl = `https://${process.env.HOST}/wholesale-pricing.js`;
+      const scriptUrl = `https://${this.hostName}/wholesale-pricing.js`;
       
       const alreadyInstalled = existingScripts.body.script_tags?.some(
         (tag: any) => tag.src === scriptUrl
@@ -61,7 +68,7 @@ export class ScriptTagService {
         path: 'script_tags',
       });
 
-      const scriptUrl = `https://${process.env.HOST}/wholesale-pricing.js`;
+      const scriptUrl = `https://${this.hostName}/wholesale-pricing.js`;
       
       const scriptTag = existingScripts.body.script_tags?.find(
         (tag: any) => tag.src === scriptUrl

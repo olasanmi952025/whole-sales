@@ -4,6 +4,7 @@ import { initializeDatabase } from './database/database-sqljs.js';
 import apiRoutes from './routes/api.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import publicRoutes from './routes/public.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 import { verifyShopifySession } from './middleware/shopify-auth.js';
 import dotenv from 'dotenv';
 import serve from 'koa-static';
@@ -79,6 +80,9 @@ async function startServer() {
 
   app.use(apiRoutes.routes());
   app.use(apiRoutes.allowedMethods());
+  
+  app.use(settingsRoutes.routes());
+  app.use(settingsRoutes.allowedMethods());
 
   // En producción (compilado): dist/web/frontend
   // En desarrollo: web/dist/frontend
