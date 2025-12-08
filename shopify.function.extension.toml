@@ -1,0 +1,4 @@
+# Configuración de Shopify Functions
+[[extensions]]
+type = "function"
+

@@ -291,18 +291,27 @@
 
                 console.log('[Wholesale] Adding to cart:', { variantId, quantity, hasActiveTier: !!activeTier });
 
-                // Si hay precio mayorista, agregar propiedades
+                // SIEMPRE agregar propiedades (para Cart Transform)
+                const properties = {};
+                
                 if (activeTier) {
-                    const properties = {
-                        '_wholesale_price': activeTier.price,
-                        '_wholesale_tier': activeTier.min_quantity,
-                        '_wholesale_rule': currentProductId
-                    };
-
-                    Object.entries(properties).forEach(([key, value]) => {
-                        formData.append(`properties[${key}]`, value);
-                    });
+                    // Precio mayorista aplicable
+                    properties['_wholesale_price'] = activeTier.price.toString();
+                    properties['_wholesale_tier'] = activeTier.min_quantity.toString();
+                    properties['_has_wholesale'] = 'true';
+                } else {
+                    // No hay precio mayorista, pero marcar para que Cart Transform lo sepa
+                    properties['_has_wholesale'] = 'false';
                 }
+                
+                // Agregar ID del producto para futuras consultas
+                properties['_product_gid'] = currentProductId || '';
+
+                Object.entries(properties).forEach(([key, value]) => {
+                    formData.append(`properties[${key}]`, value);
+                });
+                
+                console.log('[Wholesale] Properties added:', properties);
 
                 // Enviar al carrito
                 try {

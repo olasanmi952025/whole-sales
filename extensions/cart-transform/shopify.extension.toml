@@ -1,0 +1,15 @@
+api_version = "2024-01"
+
+[[extensions]]
+type = "function"
+name = "wholesale-cart-transform"
+handle = "wholesale-cart-transform"
+
+[extensions.build]
+command = "cargo wasi build --release"
+path = "target/wasm32-wasi/release/cart_transform.wasm"
+
+[[extensions.input.variables]]
+key = "shop"
+type = "string"
+
