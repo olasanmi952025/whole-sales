@@ -37,8 +37,8 @@ export class ScriptTagService {
           name: 'Product Page Script'
         },
         {
-          url: `https://${this.hostName}/wholesale-draft-order.js`,
-          name: 'Draft Order Script'
+          url: `https://${this.hostName}/wholesale-cart-discount.js`,
+          name: 'Cart Discount Display Script'
         }
       ];
 
@@ -109,7 +109,8 @@ export class ScriptTagService {
         `https://${this.hostName}/wholesale-universal.js`,
         `https://${this.hostName}/wholesale-cart-modifier.js`,
         `https://${this.hostName}/wholesale-checkout-redirect.js`,
-        `https://${this.hostName}/wholesale-draft-order.js`
+        `https://${this.hostName}/wholesale-draft-order.js`,
+        `https://${this.hostName}/wholesale-cart-discount.js`
       ];
 
       for (const scriptUrl of scriptUrls) {

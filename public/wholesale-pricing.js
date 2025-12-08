@@ -291,27 +291,18 @@
 
                 console.log('[Wholesale] Adding to cart:', { variantId, quantity, hasActiveTier: !!activeTier });
 
-                // SIEMPRE agregar propiedades (para Cart Transform)
-                const properties = {};
-                
+                // Si hay precio mayorista, agregar propiedades
                 if (activeTier) {
-                    // Precio mayorista aplicable
-                    properties['_wholesale_price'] = activeTier.price.toString();
-                    properties['_wholesale_tier'] = activeTier.min_quantity.toString();
-                    properties['_has_wholesale'] = 'true';
-                } else {
-                    // No hay precio mayorista, pero marcar para que Cart Transform lo sepa
-                    properties['_has_wholesale'] = 'false';
-                }
-                
-                // Agregar ID del producto para futuras consultas
-                properties['_product_gid'] = currentProductId || '';
+                    const properties = {
+                        '_wholesale_price': activeTier.price,
+                        '_wholesale_tier': activeTier.min_quantity,
+                        '_wholesale_rule': currentProductId
+                    };
 
-                Object.entries(properties).forEach(([key, value]) => {
-                    formData.append(`properties[${key}]`, value);
-                });
-                
-                console.log('[Wholesale] Properties added:', properties);
+                    Object.entries(properties).forEach(([key, value]) => {
+                        formData.append(`properties[${key}]`, value);
+                    });
+                }
 
                 // Enviar al carrito
                 try {
@@ -323,6 +314,11 @@
                     if (response.ok) {
                         const result = await response.json();
                         console.log('[Wholesale] Added to cart:', result);
+
+                        // Si hay precio mayorista, aplicar descuento
+                        if (activeTier) {
+                            await applyWholesaleDiscount(result, activeTier);
+                        }
 
                         // Mostrar notificación de éxito
                         showAddToCartSuccess(quantity, activeTier);
@@ -347,6 +343,102 @@
                 }
             });
         });
+    }
+
+    // Aplicar descuento mayorista al line item
+    async function applyWholesaleDiscount(cartItem, tier) {
+        try {
+            // Obtener carrito actual
+            const cartResponse = await fetch('/cart.js');
+            const cart = await cartResponse.json();
+
+            // Encontrar el item recién agregado
+            const lineItem = cart.items.find(item => 
+                item.variant_id === cartItem.variant_id || 
+                item.id === cartItem.id
+            );
+
+            if (!lineItem) {
+                console.log('[Wholesale] Could not find line item to apply discount');
+                return;
+            }
+
+            // Calcular descuento
+            const originalPrice = lineItem.original_price; // precio original en centavos
+            const wholesalePrice = tier.price * 100; // convertir a centavos
+            const discountAmount = originalPrice - wholesalePrice;
+            const discountPercentage = ((discountAmount / originalPrice) * 100).toFixed(2);
+
+            console.log('[Wholesale] Discount calculation:', {
+                original: originalPrice / 100,
+                wholesale: tier.price,
+                discount: discountAmount / 100,
+                percentage: discountPercentage
+            });
+
+            // Actualizar las propiedades del item para mostrar el descuento
+            const updates = {
+                line: lineItem.index + 1, // Shopify usa índice basado en 1
+                quantity: lineItem.quantity,
+                properties: {
+                    '_wholesale_discount': `${discountPercentage}%`,
+                    '_wholesale_saved': `$${(discountAmount / 100).toFixed(2)}`,
+                    '_wholesale_tier': tier.min_quantity
+                }
+            };
+
+            // Actualizar el carrito
+            await fetch('/cart/change.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: lineItem.key,
+                    properties: updates.properties
+                })
+            });
+
+            console.log('[Wholesale] Discount properties applied to line item');
+
+            // Agregar nota al carrito con el descuento total
+            await updateCartNote(discountAmount * lineItem.quantity);
+
+        } catch (error) {
+            console.error('[Wholesale] Error applying discount:', error);
+        }
+    }
+
+    // Actualizar nota del carrito con descuentos mayoristas
+    async function updateCartNote(totalDiscount) {
+        try {
+            const cartResponse = await fetch('/cart.js');
+            const cart = await cartResponse.json();
+
+            // Calcular descuento total de todos los items mayoristas
+            let wholesaleDiscount = 0;
+            cart.items.forEach(item => {
+                if (item.properties && item.properties._wholesale_saved) {
+                    const saved = parseFloat(item.properties._wholesale_saved.replace('$', ''));
+                    wholesaleDiscount += saved * item.quantity;
+                }
+            });
+
+            const note = `Descuento Mayorista: $${wholesaleDiscount.toFixed(2)}`;
+
+            await fetch('/cart/update.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    note: note,
+                    attributes: {
+                        'wholesale_discount': wholesaleDiscount.toFixed(2)
+                    }
+                })
+            });
+
+            console.log('[Wholesale] Cart note updated with total discount');
+        } catch (error) {
+            console.error('[Wholesale] Error updating cart note:', error);
+        }
     }
 
     // Mostrar notificación de éxito al agregar al carrito
