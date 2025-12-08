@@ -62,18 +62,17 @@ export class PricingCalculatorService {
     };
   }
 
-  calculateTotalPrice(quantity: number, tier: PricingTier): number {
-    return quantity * tier.price;
+  calculateDiscountAmount(originalPrice: number, discountPercentage: number): number {
+    return (originalPrice * discountPercentage) / 100;
   }
 
-  calculateDiscount(
-    quantity: number,
-    originalPrice: number,
-    tier: PricingTier
-  ): number {
-    const originalTotal = quantity * originalPrice;
-    const newTotal = this.calculateTotalPrice(quantity, tier);
-    return originalTotal - newTotal;
+  calculateFinalPrice(originalPrice: number, tier: PricingTier): number {
+    const discount = this.calculateDiscountAmount(originalPrice, tier.discount_percentage);
+    return originalPrice - discount;
+  }
+
+  calculateTotalDiscount(quantity: number, originalPricePerUnit: number, tier: PricingTier): number {
+    const discount = this.calculateDiscountAmount(originalPricePerUnit, tier.discount_percentage);
+    return discount * quantity;
   }
 }
-

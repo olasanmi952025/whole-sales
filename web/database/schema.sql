@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS pricing_tiers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     rule_id INTEGER NOT NULL,
     min_quantity INTEGER NOT NULL,
-    price REAL NOT NULL,
+    discount_percentage REAL NOT NULL CHECK(discount_percentage >= 0 AND discount_percentage <= 100),
     currency TEXT DEFAULT 'USD',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (rule_id) REFERENCES pricing_rules(id) ON DELETE CASCADE

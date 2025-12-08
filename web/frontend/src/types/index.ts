@@ -4,7 +4,7 @@ export interface PricingTier {
   id?: number;
   rule_id?: number;
   min_quantity: number;
-  price: number;
+  discount_percentage: number; // 0-100
   currency?: string;
   created_at?: string;
 }

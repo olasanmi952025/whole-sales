@@ -40,33 +40,25 @@ export function validatePricingRule(rule: Partial<PricingRule>): void {
 }
 
 export function validatePricingTiers(tiers: PricingTier[]): void {
-  if (tiers.length === 0) {
-    throw new ValidationError('At least one tier is required');
+  if (!tiers || tiers.length === 0) {
+    throw new ValidationError('At least one pricing tier is required');
   }
-
-  const quantities = new Set<number>();
 
   for (const tier of tiers) {
-    if (tier.min_quantity <= 0) {
-      throw new ValidationError('Minimum quantity must be greater than 0');
+    if (!tier.min_quantity || tier.min_quantity < 1) {
+      throw new ValidationError('Minimum quantity must be at least 1');
     }
 
-    if (tier.price < 0) {
-      throw new ValidationError('Price cannot be negative');
+    if (tier.discount_percentage < 0 || tier.discount_percentage > 100) {
+      throw new ValidationError('Discount percentage must be between 0 and 100');
     }
-
-    if (quantities.has(tier.min_quantity)) {
-      throw new ValidationError(`Duplicate minimum quantity: ${tier.min_quantity}`);
-    }
-
-    quantities.add(tier.min_quantity);
   }
 
+  // Verificar que los tiers tengan descuentos crecientes (mayor cantidad = mayor descuento)
   const sortedTiers = [...tiers].sort((a, b) => a.min_quantity - b.min_quantity);
-  
   for (let i = 1; i < sortedTiers.length; i++) {
-    if (sortedTiers[i].price > sortedTiers[i - 1].price) {
-      throw new ValidationError('Price should decrease or stay the same as quantity increases');
+    if (sortedTiers[i].discount_percentage < sortedTiers[i - 1].discount_percentage) {
+      throw new ValidationError('Higher quantity tiers should have equal or greater discounts');
     }
   }
 }
@@ -92,4 +84,3 @@ export function extractIdFromGID(gid: string): string {
   const parts = gid.split('/');
   return parts[parts.length - 1];
 }
-

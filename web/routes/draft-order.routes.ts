@@ -108,9 +108,10 @@ router.post('/api/public/create-draft-order', async (ctx: Context) => {
         const applicableTier = sortedTiers.find(t => quantity >= t.min_quantity);
 
         if (applicableTier) {
-          wholesalePrice = Math.round(applicableTier.price * quantity * 100);
+          const discountAmount = (originalPrice * applicableTier.discount_percentage) / 100;
+          wholesalePrice = originalPrice - discountAmount;
           hasWholesalePricing = true;
-          totalSavings += (originalPrice - wholesalePrice);
+          totalSavings += discountAmount;
           console.log('[Draft Order] Tier applied:', {
             product: title,
             quantity,

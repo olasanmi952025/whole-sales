@@ -31,16 +31,18 @@ export default function RuleForm({ rule, onSave, onCancel }: RuleFormProps) {
       target_id: targetId,
       priority: parseInt(priority),
       active,
-      tiers: tiers.filter(t => t.min_quantity > 0 && t.price >= 0),
+      tiers: tiers.filter(t => t.min_quantity > 0 && t.discount_percentage >= 0 && t.discount_percentage <= 100),
     };
 
     onSave(newRule);
   };
 
   const isValid = ruleName && targetId && tiers.length > 0 && 
-    tiers.every(t => t.min_quantity > 0 && t.price >= 0);
+    tiers.every(t => t.min_quantity > 0 && t.discount_percentage >= 0 && t.discount_percentage <= 100);
 
-  const hasInvalidTiers = tiers.length > 0 && tiers.some(t => t.min_quantity <= 0 || t.price < 0);
+  const hasInvalidTiers = tiers.length > 0 && tiers.some(t => 
+    t.min_quantity <= 0 || t.discount_percentage < 0 || t.discount_percentage > 100
+  );
 
   return (
     <Card>
@@ -104,7 +106,7 @@ export default function RuleForm({ rule, onSave, onCancel }: RuleFormProps) {
 
           {hasInvalidTiers && (
             <Banner tone="warning">
-              All tiers must have a quantity greater than 0 and a price of 0 or more.
+              Todos los niveles deben tener una cantidad mayor a 0 y un descuento entre 0% y 100%.
             </Banner>
           )}
 

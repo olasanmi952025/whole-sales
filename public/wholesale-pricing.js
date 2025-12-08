@@ -55,10 +55,10 @@
             return;
         }
 
-        const { unit_price, total_price, tier, all_tiers } = priceData;
+        const { discount_percentage, tier, all_tiers } = priceData;
         activeTier = tier;
 
-        // Actualizar el precio unitario
+        // Obtener precio original del elemento
         const priceSelectors = [
             '.price__regular .price-item--regular',
             '.product__price .price-item',
@@ -69,11 +69,20 @@
         priceSelectors.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(el => {
+                // Guardar precio original
                 if (!el.dataset.originalPrice) {
                     el.dataset.originalPrice = el.textContent;
                 }
 
-                const formatted = formatMoney(unit_price * 100); // Shopify usa centavos
+                // Extraer precio numérico del texto original
+                const originalText = el.dataset.originalPrice;
+                const priceMatch = originalText.match(/[\d,]+\.?\d*/);
+                if (!priceMatch) return;
+                
+                const originalPrice = parseFloat(priceMatch[0].replace(/,/g, ''));
+                const discountedPrice = originalPrice * (1 - discount_percentage / 100);
+                const formatted = formatMoney(Math.round(discountedPrice * 100));
+                
                 el.textContent = formatted;
                 el.style.color = '#008060'; // Verde Shopify
                 el.style.fontWeight = 'bold';
@@ -111,7 +120,7 @@
     function displayTierNotification(priceData, quantity) {
         removeTierNotification();
 
-        const { unit_price, total_price, tier, all_tiers } = priceData;
+        const { discount_percentage, tier, all_tiers } = priceData;
 
         const notification = document.createElement('div');
         notification.id = 'wholesale-tier-notification';
@@ -133,10 +142,10 @@
             ¡Precio Mayorista Aplicado!
           </div>
           <div style="font-size: 14px; opacity: 0.95;">
-            ${quantity} unidades × ${formatMoney(unit_price * 100)} = <strong>${formatMoney(total_price * 100)}</strong>
+            <strong>${discount_percentage}% de descuento</strong> en compras de ${tier.min_quantity}+ unidades
           </div>
           <div style="font-size: 12px; margin-top: 8px; opacity: 0.9;">
-            Comprando desde ${tier.min_quantity} unidades
+            ${quantity} unidades con ${discount_percentage}% OFF
           </div>
         </div>
       </div>
@@ -173,14 +182,14 @@
             return `
         <div style="display: flex; justify-content: space-between; padding: 6px 0; ${isActive ? 'font-weight: bold;' : 'opacity: 0.8;'}">
           <span>${isActive ? '✓ ' : ''}${t.min_quantity}+ unidades</span>
-          <span>${formatMoney(t.price * 100)} c/u</span>
+          <span>${t.discount_percentage}% OFF</span>
         </div>
       `;
         }).join('');
 
         return `
       <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3);">
-        <div style="font-size: 12px; margin-bottom: 8px; opacity: 0.9;">Precios por volumen:</div>
+        <div style="font-size: 12px; margin-bottom: 8px; opacity: 0.9;">Descuentos por volumen:</div>
         ${rows}
       </div>
     `;
@@ -363,17 +372,17 @@
                 return;
             }
 
-            // Calcular descuento
+            // Calcular descuento basado en porcentaje
             const originalPrice = lineItem.original_price; // precio original en centavos
-            const wholesalePrice = tier.price * 100; // convertir a centavos
-            const discountAmount = originalPrice - wholesalePrice;
-            const discountPercentage = ((discountAmount / originalPrice) * 100).toFixed(2);
+            const discountPercentage = tier.discount_percentage;
+            const discountAmount = Math.round((originalPrice * discountPercentage) / 100);
+            const finalPrice = originalPrice - discountAmount;
 
             console.log('[Wholesale] Discount calculation:', {
                 original: originalPrice / 100,
-                wholesale: tier.price,
-                discount: discountAmount / 100,
-                percentage: discountPercentage
+                discount_percentage: discountPercentage,
+                discount_amount: discountAmount / 100,
+                final_price: finalPrice / 100
             });
 
             // Actualizar las propiedades del item para mostrar el descuento
@@ -381,9 +390,10 @@
                 line: lineItem.index + 1, // Shopify usa índice basado en 1
                 quantity: lineItem.quantity,
                 properties: {
-                    '_wholesale_discount': `${discountPercentage}%`,
+                    '_wholesale_discount': `${discountPercentage.toFixed(2)}%`,
                     '_wholesale_saved': `$${(discountAmount / 100).toFixed(2)}`,
-                    '_wholesale_tier': tier.min_quantity
+                    '_wholesale_tier': tier.min_quantity,
+                    '_wholesale_final_price': `$${(finalPrice / 100).toFixed(2)}`
                 }
             };
 

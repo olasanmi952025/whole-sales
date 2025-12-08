@@ -143,8 +143,8 @@ export class PricingRulesRepository {
     
     for (const tier of tiers) {
       db.run(
-        'INSERT INTO pricing_tiers (rule_id, min_quantity, price, currency) VALUES (?, ?, ?, ?)',
-        [ruleId, tier.min_quantity, tier.price, tier.currency || 'USD']
+        'INSERT INTO pricing_tiers (rule_id, min_quantity, discount_percentage, currency) VALUES (?, ?, ?, ?)',
+        [ruleId, tier.min_quantity, tier.discount_percentage, tier.currency || 'USD']
       );
     }
   }

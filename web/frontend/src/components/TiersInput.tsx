@@ -13,7 +13,7 @@ export default function TiersInput({ tiers, onChange }: TiersInputProps) {
       : 0;
     onChange([...tiers, { 
       min_quantity: lastQuantity + 1, 
-      price: 0, 
+      discount_percentage: 0, 
       currency: 'USD' 
     }]);
   };
@@ -22,8 +22,11 @@ export default function TiersInput({ tiers, onChange }: TiersInputProps) {
     const newTiers = [...tiers];
     if (field === 'min_quantity') {
       newTiers[index][field] = parseInt(value) || 0;
-    } else if (field === 'price') {
-      newTiers[index][field] = parseFloat(value) || 0;
+    } else if (field === 'discount_percentage') {
+      let discount = parseFloat(value) || 0;
+      // Validar que esté entre 0 y 100
+      discount = Math.max(0, Math.min(100, discount));
+      newTiers[index][field] = discount;
     }
     onChange(newTiers);
   };
@@ -37,9 +40,9 @@ export default function TiersInput({ tiers, onChange }: TiersInputProps) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text variant="headingMd" as="h2">Price Tiers</Text>
+        <Text variant="headingMd" as="h2">Niveles de Descuento</Text>
         <Text variant="bodySm" as="span" tone="subdued">
-          Configure at least one pricing tier
+          Configura al menos un nivel de descuento
         </Text>
       </div>
       <div style={{ marginTop: '12px' }}>
@@ -52,10 +55,10 @@ export default function TiersInput({ tiers, onChange }: TiersInputProps) {
             marginBottom: '12px'
           }}>
             <Text variant="bodyMd" as="p" tone="subdued">
-              No pricing tiers configured yet.
+              No hay niveles de descuento configurados.
             </Text>
             <Text variant="bodySm" as="p" tone="subdued">
-              Click "Add First Tier" below to create your first pricing tier.
+              Click en "Agregar Primer Nivel" para crear tu primer nivel de descuento.
             </Text>
           </div>
         ) : null}
@@ -68,37 +71,45 @@ export default function TiersInput({ tiers, onChange }: TiersInputProps) {
           }}>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Min Quantity"
+                label="Cantidad Mínima"
                 type="number"
                 value={tier.min_quantity.toString()}
                 onChange={(value) => updateTier(index, 'min_quantity', value)}
                 autoComplete="off"
                 min="1"
+                helpText="Cantidad mínima de unidades"
               />
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Price"
+                label="Descuento %"
                 type="number"
-                value={tier.price.toString()}
-                onChange={(value) => updateTier(index, 'price', value)}
+                value={tier.discount_percentage?.toString() || '0'}
+                onChange={(value) => updateTier(index, 'discount_percentage', value)}
                 autoComplete="off"
-                prefix="$"
+                suffix="%"
                 min="0"
+                max="100"
                 step="0.01"
+                error={
+                  tier.discount_percentage < 0 || tier.discount_percentage > 100
+                    ? 'Debe estar entre 0 y 100'
+                    : undefined
+                }
+                helpText="Porcentaje de descuento (0-100)"
               />
             </div>
             <Button
               tone="critical"
               onClick={() => removeTier(index)}
             >
-              Remove
+              Eliminar
             </Button>
           </div>
         ))}
       </div>
       <Button onClick={addTier} variant="primary">
-        {tiers.length === 0 ? 'Add First Tier' : 'Add Another Tier'}
+        {tiers.length === 0 ? 'Agregar Primer Nivel' : 'Agregar Otro Nivel'}
       </Button>
     </div>
   );

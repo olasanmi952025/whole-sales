@@ -145,7 +145,7 @@ export class PricingRulesController {
       data: applicableTier ? {
         rule_name: rule.rule_name,
         tier: applicableTier,
-        total: quantity * applicableTier.price
+        discount_percentage: applicableTier.discount_percentage
       } : null
     };
   }
@@ -164,7 +164,7 @@ export class PricingRulesController {
     }
 
     for (const tier of rule.tiers) {
-      if (tier.min_quantity <= 0 || tier.price < 0) {
+      if (tier.min_quantity <= 0 || tier.discount_percentage < 0 || tier.discount_percentage > 100) {
         return false;
       }
     }

@@ -80,14 +80,13 @@ router.post('/calculate-price', async (ctx) => {
         rule_name: rule.rule_name,
         tier: {
           min_quantity: applicableTier.min_quantity,
-          price: applicableTier.price,
+          discount_percentage: applicableTier.discount_percentage,
           currency: applicableTier.currency || 'USD'
         },
-        unit_price: applicableTier.price,
-        total_price: quantity * applicableTier.price,
+        discount_percentage: applicableTier.discount_percentage,
         all_tiers: rule.tiers.map(t => ({
           min_quantity: t.min_quantity,
-          price: t.price
+          discount_percentage: t.discount_percentage
         })).sort((a, b) => a.min_quantity - b.min_quantity)
       }
     };
@@ -147,9 +146,10 @@ router.post('/calculate-cart', async (ctx) => {
         const applicableTier = sortedTiers.find(t => quantity >= t.min_quantity);
 
         if (applicableTier) {
-          wholesalePrice = applicableTier.price * quantity;
-          const originalPrice = line_price / 100; // Shopify envía en centavos
-          itemDiscount = Math.max(0, originalPrice - wholesalePrice);
+          const originalPrice = line_price / 100; // Convertir de centavos a dólares
+          const discountAmount = (originalPrice * applicableTier.discount_percentage) / 100;
+          wholesalePrice = originalPrice - discountAmount;
+          itemDiscount = discountAmount;
           totalDiscount += itemDiscount;
           hasWholesalePricing = true;
 
@@ -157,9 +157,19 @@ router.post('/calculate-cart', async (ctx) => {
             variant_id,
             quantity,
             original: originalPrice,
-            wholesale: wholesalePrice,
-            discount: itemDiscount
+            discount_percentage: applicableTier.discount_percentage,
+            discount_amount: discountAmount,
+            final_price: wholesalePrice
           });
+        }
+      }
+
+      let tierDiscountPercentage = 0;
+      if (rule && rule.tiers && rule.tiers.length > 0) {
+        const sortedTiers = [...rule.tiers].sort((a, b) => b.min_quantity - a.min_quantity);
+        const foundTier = sortedTiers.find(t => quantity >= t.min_quantity);
+        if (foundTier) {
+          tierDiscountPercentage = foundTier.discount_percentage;
         }
       }
 
@@ -170,6 +180,7 @@ router.post('/calculate-cart', async (ctx) => {
         original_line_price: line_price,
         wholesale_line_price: wholesalePrice ? Math.round(wholesalePrice * 100) : null,
         discount: Math.round(itemDiscount * 100),
+        discount_percentage: tierDiscountPercentage,
         rule_applied: rule ? {
           id: rule.id,
           name: rule.rule_name
@@ -240,7 +251,8 @@ router.post('/create-wholesale-checkout', async (ctx) => {
         const applicableTier = sortedTiers.find(t => quantity >= t.min_quantity);
 
         if (applicableTier) {
-          wholesalePrice = applicableTier.price;
+          const discountAmount = (originalPrice * applicableTier.discount_percentage) / 100;
+          wholesalePrice = originalPrice - discountAmount;
           hasWholesalePricing = true;
         }
       }
